@@ -1,24 +1,90 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, Calendar, MapPin, AlignLeft, Image as ImageIcon, ChevronRight, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Calendar, MapPin, AlignLeft, ChevronRight, Globe } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
+import { useAuth } from '../contexts/AuthContext';
+import { Trip } from '../types';
 
-const AddTripPage: React.FC = () => {
+const EditTripPage: React.FC = () => {
+  const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
-  const { addTrip } = useTrips();
+  const { getTripById, refreshTrip, updateTrip } = useTrips();
+  const { user } = useAuth();
+
+  const [trip, setTrip] = useState<Trip | null | undefined>(undefined);
   const [formData, setFormData] = useState({
     title: '',
     destination: '',
     startDate: '',
     endDate: '',
     description: '',
-    coverImage: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=800',
+    coverImage: '',
     isPublic: false,
+    status: 'draft' as 'draft' | 'active' | 'completed' | 'archived',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    if (!tripId) return;
+    const cached = getTripById(tripId);
+    if (cached) {
+      setTrip(cached);
+      setFormData({
+        title: cached.title,
+        destination: cached.destination,
+        startDate: cached.startDate,
+        endDate: cached.endDate,
+        description: cached.description,
+        coverImage: cached.coverImage,
+        isPublic: cached.isPublic,
+        status: cached.status,
+      });
+    } else {
+      refreshTrip(tripId).then((fetched) => {
+        if (fetched) {
+          setTrip(fetched);
+          setFormData({
+            title: fetched.title,
+            destination: fetched.destination,
+            startDate: fetched.startDate,
+            endDate: fetched.endDate,
+            description: fetched.description,
+            coverImage: fetched.coverImage,
+            isPublic: fetched.isPublic,
+            status: fetched.status,
+          });
+        } else {
+          setTrip(null);
+        }
+      });
+    }
+  }, [tripId, getTripById, refreshTrip]);
+
+  // Owner check
+  if (trip && user && trip.ownerId !== user.id) {
+    navigate(`/trip/${tripId}`, { replace: true });
+    return null;
+  }
+
+  if (trip === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (trip === null) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <p className="text-slate-500 font-medium">Trip not found</p>
+        <button onClick={() => navigate('/')} className="text-indigo-600 font-bold hover:underline">Go back home</button>
+      </div>
+    );
+  }
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -27,17 +93,13 @@ const AddTripPage: React.FC = () => {
     } else if (formData.title.trim().length > 100) {
       newErrors.title = 'Title must be under 100 characters.';
     }
-    if (!formData.destination.trim()) {
-      newErrors.destination = 'Destination is required.';
-    }
+    if (!formData.destination.trim()) newErrors.destination = 'Destination is required.';
     if (!formData.startDate) {
       newErrors.startDate = 'Start date is required.';
     } else if (formData.startDate < new Date().toISOString().split('T')[0]) {
       newErrors.startDate = 'Start date cannot be in the past.';
     }
-    if (!formData.endDate) {
-      newErrors.endDate = 'End date is required.';
-    }
+    if (!formData.endDate) newErrors.endDate = 'End date is required.';
     if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
       newErrors.endDate = 'End date must be on or after start date.';
     }
@@ -54,10 +116,19 @@ const AddTripPage: React.FC = () => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const tripId = await addTrip(formData);
+      await updateTrip(tripId!, {
+        title: formData.title,
+        destination: formData.destination,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        description: formData.description,
+        coverImage: formData.coverImage,
+        isPublic: formData.isPublic,
+        status: formData.status,
+      });
       navigate(`/trip/${tripId}`);
     } catch {
-      setSubmitError('Failed to create trip. Please try again.');
+      setSubmitError('Failed to update trip. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -71,12 +142,11 @@ const AddTripPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {/* Header */}
-      <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-white sticky top-0 z-10">
-        <h2 className="text-xl font-bold text-slate-800">Plan New Trip</h2>
-        <button onClick={() => navigate('/')} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-colors">
-          <X size={20} />
+      <div className="px-6 py-4 flex items-center border-b border-slate-100 bg-white sticky top-0 z-10">
+        <button onClick={() => navigate(`/trip/${tripId}`)} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
+          <ChevronLeft size={24} />
         </button>
+        <h2 className="ml-2 text-xl font-bold text-slate-800">Edit Trip</h2>
       </div>
 
       {submitError && (
@@ -86,21 +156,6 @@ const AddTripPage: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto no-scrollbar">
-        {/* Banner Preview */}
-        <div className="relative h-44 rounded-3xl overflow-hidden group cursor-pointer">
-          <img
-            src={formData.coverImage}
-            alt="Preview"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl text-white flex items-center space-x-2">
-              <ImageIcon size={20} />
-              <span className="text-xs font-bold uppercase tracking-wider">Change Cover</span>
-            </div>
-          </div>
-        </div>
-
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Trip Name</label>
@@ -110,7 +165,6 @@ const AddTripPage: React.FC = () => {
               value={formData.title}
               onChange={handleInputChange}
               type="text"
-              placeholder="Summer Vacay 2024"
               className={`w-full bg-slate-50 border py-3.5 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold ${errors.title ? 'border-rose-300' : 'border-slate-100'}`}
             />
             {errors.title && <p className="text-rose-500 text-xs font-medium ml-1">{errors.title}</p>}
@@ -126,7 +180,6 @@ const AddTripPage: React.FC = () => {
                 value={formData.destination}
                 onChange={handleInputChange}
                 type="text"
-                placeholder="Where are we going?"
                 className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold ${errors.destination ? 'border-rose-300' : 'border-slate-100'}`}
               />
             </div>
@@ -175,14 +228,29 @@ const AddTripPage: React.FC = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                placeholder="What's the vibe of this trip?"
                 className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-sm resize-none ${errors.description ? 'border-rose-300' : 'border-slate-100'}`}
               />
             </div>
             {errors.description && <p className="text-rose-500 text-xs font-medium ml-1">{errors.description}</p>}
           </div>
 
-          {/* Public toggle */}
+          {/* Status selector */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, status: e.target.value as 'draft' | 'active' | 'completed' | 'archived' }));
+              }}
+              className="w-full bg-slate-50 border border-slate-100 py-3.5 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold text-sm"
+            >
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+
           <label className="flex items-center space-x-3 px-1 cursor-pointer">
             <input
               type="checkbox"
@@ -206,7 +274,7 @@ const AddTripPage: React.FC = () => {
             <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
           ) : (
             <>
-              <span>Start Exploring</span>
+              <span>Save Changes</span>
               <ChevronRight size={18} />
             </>
           )}
@@ -216,4 +284,4 @@ const AddTripPage: React.FC = () => {
   );
 };
 
-export default AddTripPage;
+export default EditTripPage;

@@ -16,6 +16,7 @@ import ExplorePage from './pages/ExplorePage';
 import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import EditTripPage from './pages/EditTripPage';
 
 const App: React.FC = () => {
   return (
@@ -39,6 +40,7 @@ const App: React.FC = () => {
               <Route index element={<Dashboard />} />
               <Route path="trip/:tripId" element={<TripDetail />} />
               <Route path="add-trip" element={<AddTripPage />} />
+              <Route path="edit-trip/:tripId" element={<EditTripPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="maps" element={<MapsPage />} />
               <Route path="gallery" element={<GalleryPage />} />

@@ -5,19 +5,24 @@ import { Plus, Filter, PieChart as ChartIcon, Sparkles, User as UserIcon } from 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { summarizeExpenses } from '../services/geminiService';
 import { useTrips } from '../contexts/TripContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f97316', '#14b8a6'];
 
 const ExpensesPage: React.FC = () => {
   const { trips } = useTrips();
-  const selectedTrip = trips[0];
+  const { user } = useAuth();
+  const [selectedTripId, setSelectedTripId] = useState<string>('');
+
+  const activeTripId = selectedTripId || trips[0]?.id || '';
+  const selectedTrip = trips.find(t => t.id === activeTripId);
 
   const [expenses, setExpenses] = useState<Expense[]>(
     selectedTrip
       ? [
-          { id: 'e1', tripId: selectedTrip.id, amount: 1500, description: 'Hotel Booking', payerId: 'u1', date: '2024-06-15', participants: ['u1', 'u2'] },
-          { id: 'e2', tripId: selectedTrip.id, amount: 600, description: 'Dinner Hunza', payerId: 'u2', date: '2024-06-16', participants: ['u1', 'u2'] },
-          { id: 'e3', tripId: selectedTrip.id, amount: 200, description: 'Gas refill', payerId: 'u1', date: '2024-06-17', participants: ['u1', 'u2'] },
+          { id: 'e1', tripId: selectedTrip.id, amount: 1500, description: 'Hotel Booking', payerId: selectedTrip.participants[0]?.id || '', date: '2024-06-15', participants: selectedTrip.participantIds },
+          { id: 'e2', tripId: selectedTrip.id, amount: 600, description: 'Dinner Hunza', payerId: selectedTrip.participants[1]?.id || selectedTrip.participants[0]?.id || '', date: '2024-06-16', participants: selectedTrip.participantIds },
+          { id: 'e3', tripId: selectedTrip.id, amount: 200, description: 'Gas refill', payerId: selectedTrip.participants[0]?.id || '', date: '2024-06-17', participants: selectedTrip.participantIds },
         ]
       : []
   );
@@ -25,7 +30,7 @@ const ExpensesPage: React.FC = () => {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
 
-  const currentUserId = 'u1';
+  const currentUserId = user?.id || '';
 
   if (!selectedTrip) {
     return (
@@ -34,6 +39,11 @@ const ExpensesPage: React.FC = () => {
       </div>
     );
   }
+
+  const handleTripChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedTripId(e.target.value);
+    setAiSummary(null);
+  };
 
   const calculateBalances = () => {
     const balances: Record<string, number> = {};
@@ -76,6 +86,19 @@ const ExpensesPage: React.FC = () => {
         <h2 className="text-2xl font-bold text-slate-800">Split Expenses</h2>
         <p className="text-slate-500 text-sm mt-1">{selectedTrip.title} • {selectedTrip.participants.length} Members</p>
       </section>
+
+      {/* Trip Selector */}
+      {trips.length > 1 && (
+        <select
+          value={activeTripId}
+          onChange={handleTripChange}
+          className="w-full bg-white border border-slate-200 py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold text-sm text-slate-700"
+        >
+          {trips.map(t => (
+            <option key={t.id} value={t.id}>{t.title} — {t.destination}</option>
+          ))}
+        </select>
+      )}
 
       {/* Overview Card */}
       <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
@@ -172,7 +195,13 @@ const ExpensesPage: React.FC = () => {
               <div key={participant.id} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                    <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover" />
+                    {participant.avatar ? (
+                      <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                        {participant.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="font-bold text-slate-800 text-sm">{participant.name}</p>

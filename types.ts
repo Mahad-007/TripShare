@@ -36,8 +36,39 @@ export interface Trip {
   description: string;
   ownerId: string;
   participants: User[];
+  participantIds: string[];
   coverImage: string;
   status: 'draft' | 'active' | 'completed' | 'archived';
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Firestore document shape (without the auto-generated id)
+export interface FirestoreTrip {
+  title: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  ownerId: string;
+  participantIds: string[];
+  coverImage: string;
+  status: 'draft' | 'active' | 'completed' | 'archived';
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Form submission shape
+export interface TripFormData {
+  title: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  coverImage: string;
+  isPublic?: boolean;
 }
 
 export interface ItineraryItem {

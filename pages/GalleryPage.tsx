@@ -5,8 +5,11 @@ import { useTrips } from '../contexts/TripContext';
 
 const GalleryPage: React.FC = () => {
   const { trips } = useTrips();
-  const tripId = trips[0]?.id;
+  const [selectedTripId, setSelectedTripId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'all' | 'verified'>('all');
+
+  const activeTripId = selectedTripId || trips[0]?.id || '';
+  const selectedTrip = trips.find(t => t.id === activeTripId);
 
   const media = [
     { id: '1', url: 'https://picsum.photos/seed/media1/400/600', verified: true, date: 'June 15' },
@@ -24,12 +27,25 @@ const GalleryPage: React.FC = () => {
       <section className="flex justify-between items-end">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Media Gallery</h2>
-          <p className="text-slate-500 text-sm mt-1">Capture every moment</p>
+          <p className="text-slate-500 text-sm mt-1">{selectedTrip ? selectedTrip.title : 'Capture every moment'}</p>
         </div>
         <div className="bg-white p-2.5 rounded-2xl shadow-sm border border-slate-100">
           <Search size={20} className="text-slate-400" />
         </div>
       </section>
+
+      {/* Trip Selector */}
+      {trips.length > 1 && (
+        <select
+          value={activeTripId}
+          onChange={(e) => setSelectedTripId(e.target.value)}
+          className="w-full bg-white border border-slate-200 py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold text-sm text-slate-700"
+        >
+          {trips.map(t => (
+            <option key={t.id} value={t.id}>{t.title} — {t.destination}</option>
+          ))}
+        </select>
+      )}
 
       {/* Tabs */}
       <div className="flex bg-slate-200/50 p-1.5 rounded-2xl">

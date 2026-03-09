@@ -1,11 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Navigation, MapPin, List } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
 
 const MapsPage: React.FC = () => {
   const { trips } = useTrips();
-  const destination = trips[0]?.destination || 'your destination';
+  const [selectedTripId, setSelectedTripId] = useState<string>('');
+
+  const activeTripId = selectedTripId || trips[0]?.id || '';
+  const selectedTrip = trips.find(t => t.id === activeTripId);
+  const destination = selectedTrip?.destination || 'your destination';
 
   return (
     <div className="h-full flex flex-col relative">
@@ -34,7 +38,18 @@ const MapsPage: React.FC = () => {
       </div>
 
       {/* Top Search Bar Overlay */}
-      <div className="absolute top-6 left-6 right-6 z-10">
+      <div className="absolute top-6 left-6 right-6 z-10 space-y-3">
+        {trips.length > 1 && (
+          <select
+            value={activeTripId}
+            onChange={(e) => setSelectedTripId(e.target.value)}
+            className="w-full bg-white/95 backdrop-blur-md border border-slate-100 py-2.5 px-4 rounded-2xl shadow-xl outline-none font-semibold text-sm text-slate-700"
+          >
+            {trips.map(t => (
+              <option key={t.id} value={t.id}>{t.title} — {t.destination}</option>
+            ))}
+          </select>
+        )}
         <div className="bg-white rounded-2xl shadow-xl p-1.5 flex items-center border border-slate-100">
           <div className="p-2 text-slate-400">
             <Search size={20} />

@@ -1,60 +1,72 @@
-import React, { createContext, useContext, useState } from 'react';
-import { Trip, User } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Trip, TripFormData, FirestoreTrip } from '../types';
 import { useAuth } from './AuthContext';
-
-const MOCK_OWNER: User = { id: 'u1', name: 'Ehtisham Ali', email: 'ea9773520@gmail.com', avatar: 'https://picsum.photos/seed/user1/100/100' };
-
-const INITIAL_MOCK_TRIPS: Trip[] = [
-  {
-    id: 't1',
-    title: 'Northern Adventure',
-    destination: 'Hunza Valley',
-    startDate: '2024-06-15',
-    endDate: '2024-06-22',
-    description: 'A deep dive into the Karakoram mountains.',
-    ownerId: 'u1',
-    participants: [MOCK_OWNER, { id: 'u2', name: 'Zohaib Hassan', email: 'cheema@gmail.com' }],
-    coverImage: 'https://images.unsplash.com/photo-1548062005-e50d0639138c?auto=format&fit=crop&q=80&w=800',
-    status: 'active',
-  },
-  {
-    id: 't2',
-    title: 'Lahore Food Crawl',
-    destination: 'Lahore, Pakistan',
-    startDate: '2024-03-10',
-    endDate: '2024-03-12',
-    description: 'Exploring the best street food in the world.',
-    ownerId: 'u1',
-    participants: [MOCK_OWNER],
-    coverImage: 'https://images.unsplash.com/photo-1622549042981-482fb3322421?auto=format&fit=crop&q=80&w=800',
-    status: 'completed',
-  },
-];
+import {
+  createTrip as createTripService,
+  updateTrip as updateTripService,
+  deleteTrip as deleteTripService,
+  getTripById as getTripByIdService,
+  subscribeToUserTrips,
+  clearUserCache,
+} from '../services/tripService';
 
 interface TripContextType {
   trips: Trip[];
-  addTrip: (newTrip: Omit<Trip, 'id' | 'ownerId' | 'participants' | 'status'>) => void;
+  loading: boolean;
+  addTrip: (data: TripFormData) => Promise<string>;
+  updateTrip: (tripId: string, data: Partial<FirestoreTrip>) => Promise<void>;
+  deleteTrip: (tripId: string) => Promise<void>;
+  getTripById: (tripId: string) => Trip | undefined;
+  refreshTrip: (tripId: string) => Promise<Trip | null>;
 }
 
 const TripContext = createContext<TripContextType | null>(null);
 
 export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [trips, setTrips] = useState<Trip[]>(INITIAL_MOCK_TRIPS);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const addTrip = (newTrip: Omit<Trip, 'id' | 'ownerId' | 'participants' | 'status'>) => {
-    const trip: Trip = {
-      ...newTrip,
-      id: `t${Date.now()}`,
-      ownerId: user?.id || 'u1',
-      participants: user ? [user] : [MOCK_OWNER],
-      status: 'draft',
-    };
-    setTrips((prev) => [trip, ...prev]);
-  };
+  useEffect(() => {
+    if (!user) {
+      setTrips([]);
+      setLoading(false);
+      clearUserCache();
+      return;
+    }
+
+    setLoading(true);
+    const unsubscribe = subscribeToUserTrips(user.id, (newTrips) => {
+      setTrips(newTrips);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addTrip = useCallback(async (data: TripFormData): Promise<string> => {
+    if (!user) throw new Error('Must be logged in to create a trip');
+    return createTripService(data, user.id);
+  }, [user]);
+
+  const updateTrip = useCallback(async (tripId: string, data: Partial<FirestoreTrip>): Promise<void> => {
+    await updateTripService(tripId, data);
+  }, []);
+
+  const deleteTrip = useCallback(async (tripId: string): Promise<void> => {
+    await deleteTripService(tripId);
+  }, []);
+
+  const getTripById = useCallback((tripId: string): Trip | undefined => {
+    return trips.find((t) => t.id === tripId);
+  }, [trips]);
+
+  const refreshTrip = useCallback(async (tripId: string): Promise<Trip | null> => {
+    return getTripByIdService(tripId);
+  }, []);
 
   return (
-    <TripContext.Provider value={{ trips, addTrip }}>
+    <TripContext.Provider value={{ trips, loading, addTrip, updateTrip, deleteTrip, getTripById, refreshTrip }}>
       {children}
     </TripContext.Provider>
   );
