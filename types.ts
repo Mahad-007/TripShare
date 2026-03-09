@@ -14,6 +14,28 @@ export interface Expense {
   payerId: string;
   date: string;
   participants: string[]; // User IDs involved in this expense
+  createdBy: string;
+  createdAt: string;
+}
+
+// Firestore document shape for expenses (no id, no tripId — implicit in subcollection path)
+export interface FirestoreExpense {
+  amount: number;
+  description: string;
+  payerId: string;
+  date: string;
+  participants: string[];
+  createdBy: string;
+  createdAt: string;
+}
+
+// Form input shape for expenses
+export interface ExpenseFormData {
+  amount: number;
+  description: string;
+  payerId: string;
+  date: string;
+  participants: string[];
 }
 
 export interface Media {
