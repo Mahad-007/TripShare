@@ -1,0 +1,8 @@
+{
+  "name": "TripShare",
+  "description": "An all-in-one group trip management platform featuring expense splitting, route planning, and blockchain-verified media sharing.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

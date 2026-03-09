@@ -1,0 +1,61 @@
+
+import React from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Home, Compass, Receipt, Image, User, PlusCircle } from 'lucide-react';
+
+const navItems = [
+  { path: '/', icon: Home, label: 'Home' },
+  { path: '/explore', icon: Compass, label: 'Explore' },
+  { path: '/expenses', icon: Receipt, label: 'Split' },
+  { path: '/gallery', icon: Image, label: 'Vault' },
+  { path: '/profile', icon: User, label: 'You' },
+];
+
+const Layout: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 max-w-md mx-auto relative shadow-2xl overflow-hidden border-x border-slate-200">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <h1 className="text-xl font-bold text-indigo-600 tracking-tight">TripShare</h1>
+        <button
+          onClick={() => navigate('/add-trip')}
+          className="bg-indigo-600 p-2 rounded-full text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
+        >
+          <PlusCircle size={20} />
+        </button>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+        <Outlet />
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 px-4 py-3 flex justify-between items-center z-50">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            end={item.path === '/'}
+            className={({ isActive }) =>
+              `flex flex-col items-center space-y-1 transition-all duration-300 ${
+                isActive ? 'text-indigo-600 scale-110' : 'text-slate-400'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <item.icon size={20} fill={isActive ? "currentColor" : "none"} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
+};
+
+export default Layout;
