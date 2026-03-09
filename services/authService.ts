@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   GoogleAuthProvider,
   sendPasswordResetEmail,
   signOut,
@@ -11,6 +12,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { Capacitor } from '@capacitor/core';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -31,18 +33,44 @@ export async function loginWithEmail(email: string, password: string) {
 }
 
 export async function loginWithGoogle() {
-  const credential = await signInWithPopup(auth, googleProvider);
-  await setDoc(
-    doc(db, 'users', credential.user.uid),
-    {
-      name: credential.user.displayName || '',
-      email: credential.user.email || '',
-      avatar: credential.user.photoURL || '',
-      createdAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
-  return credential.user;
+  if (Capacitor.isNativePlatform()) {
+    // Native Android/iOS: use Capacitor Google Auth plugin
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+    await GoogleAuth.initialize({
+      clientId: import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID,
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
+    });
+    const googleUser = await GoogleAuth.signIn();
+    const idToken = googleUser.authentication.idToken;
+    const firebaseCredential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, firebaseCredential);
+    await setDoc(
+      doc(db, 'users', result.user.uid),
+      {
+        name: result.user.displayName || '',
+        email: result.user.email || '',
+        avatar: result.user.photoURL || '',
+        createdAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    return result.user;
+  } else {
+    // Web: use popup as before
+    const credential = await signInWithPopup(auth, googleProvider);
+    await setDoc(
+      doc(db, 'users', credential.user.uid),
+      {
+        name: credential.user.displayName || '',
+        email: credential.user.email || '',
+        avatar: credential.user.photoURL || '',
+        createdAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    return credential.user;
+  }
 }
 
 export async function resetPassword(email: string) {
@@ -50,6 +78,14 @@ export async function resetPassword(email: string) {
 }
 
 export async function logout() {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+      await GoogleAuth.signOut();
+    } catch (_) {
+      // Not signed in with Google, ignore
+    }
+  }
   await signOut(auth);
 }
 

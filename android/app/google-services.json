@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "443890392011",
+    "project_id": "tripshare-2e94f",
+    "storage_bucket": "tripshare-2e94f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:443890392011:android:4bf74b7c50db8a098ef44e",
+        "android_client_info": {
+          "package_name": "com.tripshare.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "443890392011-cg4cbunnhqt7j7nisvksa670l3d5bosu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tripshare.app",
+            "certificate_hash": "4d973a9026b90b453fe17832b04d3ec7fc8f09bc"
+          }
+        },
+        {
+          "client_id": "443890392011-oqek5dk2sihotamc2t3lddhs4h4864ug.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHiY91iugpRIc1UIbeHrw41XxIvyp4SnQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "443890392011-oqek5dk2sihotamc2t3lddhs4h4864ug.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
