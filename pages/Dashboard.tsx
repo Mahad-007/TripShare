@@ -181,7 +181,7 @@ const Dashboard: React.FC = () => {
                 className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 active:scale-[0.98] transition-all cursor-pointer group"
               >
                 <div className="h-40 relative">
-                  <img src={trip.coverImage} alt={trip.title} className="w-full h-full object-cover" />
+                  <img src={trip.coverImage} alt={trip.title} className="w-full h-full object-cover" loading="lazy" />
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-indigo-600 shadow-sm">
                     {trip.status}
                   </div>

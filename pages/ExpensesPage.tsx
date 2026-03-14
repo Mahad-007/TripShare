@@ -10,6 +10,7 @@ import { subscribeToExpenses, deleteExpense } from '../services/expenseService';
 import { getUserRole } from '../services/tripService';
 import { exportExpensesCSV } from '../services/reportService';
 import AddExpenseModal from '../components/AddExpenseModal';
+import { useToast } from '../hooks/useToast';
 import { Unsubscribe } from 'firebase/firestore';
 
 const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f97316', '#14b8a6'];
@@ -17,6 +18,7 @@ const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f97316', '#14b8a6'];
 const ExpensesPage: React.FC = () => {
   const { trips } = useTrips();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [selectedTripId, setSelectedTripId] = useState<string>('');
 
   const activeTripId = selectedTripId || trips[0]?.id || '';
@@ -84,8 +86,27 @@ const ExpensesPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600"></div>
+      <div className="p-6 space-y-6">
+        <div className="h-8 bg-slate-200 rounded-xl w-3/4 animate-pulse" />
+        <div className="h-4 bg-slate-200 rounded-lg w-1/2 animate-pulse" />
+        {trips.length > 1 && <div className="h-12 bg-slate-200 rounded-2xl animate-pulse" />}
+        <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 space-y-4">
+          <div className="h-6 w-1/3 bg-slate-200 rounded-lg animate-pulse" />
+          <div className="h-8 w-1/2 bg-slate-200 rounded-lg animate-pulse" />
+          <div className="h-48 bg-slate-200 rounded-2xl animate-pulse" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white p-4 rounded-[24px] shadow-sm border border-slate-100 flex items-center space-x-3">
+              <div className="w-12 h-12 bg-slate-200 rounded-2xl animate-pulse flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-2/3 bg-slate-200 rounded-lg animate-pulse" />
+                <div className="h-3 w-1/3 bg-slate-200 rounded-lg animate-pulse" />
+              </div>
+              <div className="h-5 w-16 bg-slate-200 rounded-lg animate-pulse" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -146,8 +167,9 @@ const ExpensesPage: React.FC = () => {
     setDeleting(true);
     try {
       await deleteExpense(activeTripId, expenseId, currentUserId, selectedTrip?.participantIds, selectedTrip?.title);
+      showToast('Expense deleted', 'success');
     } catch {
-      // Error — the real-time listener will keep showing the expense
+      showToast('Failed to delete expense', 'error');
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(null);
@@ -378,12 +400,14 @@ const ExpensesPage: React.FC = () => {
                       <button
                         onClick={() => setEditingExpense(expense)}
                         className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                        aria-label="Edit expense"
                       >
                         <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(expense.id)}
                         className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+                        aria-label="Delete expense"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -439,6 +463,7 @@ const ExpensesPage: React.FC = () => {
       <button
         onClick={() => setShowModal(true)}
         className="fixed bottom-24 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-300 flex items-center justify-center active:scale-90 transition-all z-40"
+        aria-label="Add expense"
       >
         <Plus size={32} strokeWidth={3} />
       </button>

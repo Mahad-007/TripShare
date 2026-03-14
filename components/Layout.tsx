@@ -4,6 +4,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Home, Compass, Receipt, Image, User, PlusCircle, Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { subscribeToUnreadCount } from '../services/notificationService';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -18,6 +19,7 @@ const Layout: React.FC = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const unsubRef = useRef<(() => void) | null>(null);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     if (!user) return;
@@ -34,6 +36,7 @@ const Layout: React.FC = () => {
           <button
             onClick={() => navigate('/notifications')}
             className="relative p-2 rounded-full hover:bg-slate-100 transition-colors"
+            aria-label="Notifications"
           >
             <Bell size={20} className="text-slate-600" />
             {unreadCount > 0 && (
@@ -45,11 +48,19 @@ const Layout: React.FC = () => {
           <button
             onClick={() => navigate('/add-trip')}
             className="bg-indigo-600 p-2 rounded-full text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
+            aria-label="Create new trip"
           >
             <PlusCircle size={20} />
           </button>
         </div>
       </header>
+
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="bg-amber-500 text-white text-xs font-bold text-center py-1.5">
+          You're offline — changes will sync when reconnected
+        </div>
+      )}
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto pb-24 no-scrollbar">

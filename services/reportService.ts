@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { Trip, Expense, User } from '../types';
 
 function calculateBalances(
@@ -22,11 +20,14 @@ function getParticipantName(participants: User[], id: string): string {
   return participants.find((p) => p.id === id)?.name || 'Unknown';
 }
 
-export function generateTripReportPDF(
+export async function generateTripReportPDF(
   trip: Trip,
   expenses: Expense[],
   participants: User[]
-): void {
+): Promise<void> {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 

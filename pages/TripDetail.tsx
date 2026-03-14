@@ -10,12 +10,14 @@ import { sendInvitation } from '../services/invitationService';
 import { subscribeToExpenses } from '../services/expenseService';
 import { generateTripReportPDF } from '../services/reportService';
 import { Trip, Expense } from '../types';
+import { useToast } from '../hooks/useToast';
 
 const TripDetail: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
   const { getTripById, refreshTrip, deleteTrip } = useTrips();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [trip, setTrip] = useState<Trip | null | undefined>(undefined);
   const [itinerary, setItinerary] = useState<string | null>(null);
@@ -59,8 +61,23 @@ const TripDetail: React.FC = () => {
 
   if (trip === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600"></div>
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-slate-200">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse" />
+            <div className="ml-3 h-5 w-32 bg-slate-200 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100">
+            <div className="aspect-video bg-slate-200 animate-pulse" />
+          </div>
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+            <div className="h-6 w-3/4 bg-slate-200 rounded-lg animate-pulse" />
+            <div className="h-4 w-full bg-slate-200 rounded-lg animate-pulse" />
+            <div className="h-4 w-1/2 bg-slate-200 rounded-lg animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -93,8 +110,10 @@ const TripDetail: React.FC = () => {
     setDeleting(true);
     try {
       await deleteTrip(trip.id);
+      showToast('Trip deleted', 'success');
       navigate('/');
     } catch {
+      showToast('Failed to delete trip', 'error');
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -116,22 +135,29 @@ const TripDetail: React.FC = () => {
       }
     } catch {
       setParticipantError('Failed to send invitation.');
+      showToast('Failed to send invitation', 'error');
     } finally {
       setAddingParticipant(false);
     }
   };
 
-  const handleExportReport = () => {
+  const handleExportReport = async () => {
     if (trip && expenses.length > 0) {
-      generateTripReportPDF(trip, expenses, trip.participants);
+      try {
+        await generateTripReportPDF(trip, expenses, trip.participants);
+        showToast('PDF report downloaded', 'success');
+      } catch {
+        showToast('Failed to generate report', 'error');
+      }
     }
   };
 
   const handleRemoveParticipant = async (userId: string) => {
     try {
       await removeParticipant(trip.id, userId);
+      showToast('Participant removed', 'success');
     } catch {
-      // Error handled silently — real-time subscription updates the UI
+      showToast('Failed to remove participant', 'error');
     }
   };
 
@@ -140,7 +166,7 @@ const TripDetail: React.FC = () => {
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center min-w-0">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-slate-100 rounded-full flex-shrink-0">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-slate-100 rounded-full flex-shrink-0" aria-label="Go back">
             <ChevronLeft size={24} />
           </button>
           <h2 className="ml-2 font-bold text-lg truncate">{trip.title}</h2>
@@ -151,15 +177,16 @@ const TripDetail: React.FC = () => {
             disabled={expenses.length === 0}
             className="p-2 hover:bg-slate-100 rounded-full text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed"
             title={expenses.length === 0 ? 'No expenses to export' : 'Export PDF report'}
+            aria-label="Export PDF report"
           >
             <Download size={18} />
           </button>
           {isOwner && (
             <>
-              <button onClick={() => navigate(`/edit-trip/${trip.id}`)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+              <button onClick={() => navigate(`/edit-trip/${trip.id}`)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500" aria-label="Edit trip">
                 <Pencil size={18} />
               </button>
-              <button onClick={() => setShowDeleteConfirm(true)} className="p-2 hover:bg-rose-50 rounded-full text-rose-500">
+              <button onClick={() => setShowDeleteConfirm(true)} className="p-2 hover:bg-rose-50 rounded-full text-rose-500" aria-label="Delete trip">
                 <Trash2 size={18} />
               </button>
             </>

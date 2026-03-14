@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, DollarSign, AlignLeft, Users } from 'lucide-react';
 import { User, Expense, ExpenseFormData } from '../types';
 import { addExpense, updateExpense } from '../services/expenseService';
+import { useToast } from '../hooks/useToast';
 
 interface AddExpenseModalProps {
   tripId: string;
@@ -23,6 +24,15 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   tripTitle,
 }) => {
   const isEdit = !!editingExpense;
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const [formData, setFormData] = useState<ExpenseFormData>({
     amount: editingExpense?.amount || 0,
@@ -74,12 +84,16 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           date: cleanData.date,
           participants: cleanData.participants,
         }, currentUserId, participantIds, tripTitle);
+        showToast('Expense updated', 'success');
       } else {
         await addExpense(tripId, cleanData, currentUserId, participantIds, tripTitle);
+        showToast('Expense added', 'success');
       }
       onClose();
     } catch {
-      setSubmitError(isEdit ? 'Failed to update expense.' : 'Failed to add expense.');
+      const msg = isEdit ? 'Failed to update expense.' : 'Failed to add expense.';
+      setSubmitError(msg);
+      showToast(msg, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -123,10 +137,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Amount */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (Rs.)</label>
+            <label htmlFor="expense-amount" className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (Rs.)</label>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
               <input
+                id="expense-amount"
                 type="number"
                 min="1"
                 step="1"
@@ -144,10 +159,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
+            <label htmlFor="expense-description" className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
             <div className="relative">
               <AlignLeft className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
               <input
+                id="expense-description"
                 type="text"
                 maxLength={200}
                 value={formData.description}
@@ -164,10 +180,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
           {/* Date */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Date</label>
+            <label htmlFor="expense-date" className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Date</label>
             <div className="relative">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
               <input
+                id="expense-date"
                 type="date"
                 value={formData.date}
                 onChange={(e) => {
@@ -182,8 +199,9 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
           {/* Payer */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Paid By</label>
+            <label htmlFor="expense-payer" className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Paid By</label>
             <select
+              id="expense-payer"
               value={formData.payerId}
               onChange={(e) => setFormData((prev) => ({ ...prev, payerId: e.target.value }))}
               className="w-full bg-slate-50 border border-slate-100 py-3.5 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold text-sm"

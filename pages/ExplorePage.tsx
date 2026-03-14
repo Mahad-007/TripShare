@@ -345,7 +345,7 @@ const ExplorePage: React.FC = () => {
                   {post.media.type === 'video' ? (
                     <video src={post.media.url} className="w-full h-full object-cover" controls />
                   ) : (
-                    <img src={post.media.url} alt={post.media.caption || post.tripTitle} className="w-full h-full object-cover" />
+                    <img src={post.media.url} alt={post.media.caption || post.tripTitle} className="w-full h-full object-cover" loading="lazy" />
                   )}
                   {post.media.isVerified && (
                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-lg">

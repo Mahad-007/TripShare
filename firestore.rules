@@ -78,14 +78,9 @@ service cloud.firestore {
         }
       }
 
-      // Other subcollections (itinerary, etc.)
-      match /{subcollection}/{docId} {
-        allow read: if subcollection != 'expenses' && subcollection != 'media'
-          && request.auth != null
-          && (get(/databases/$(database)/documents/trips/$(tripId)).data.ownerId == request.auth.uid
-              || request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.participantIds);
-        allow write: if subcollection != 'expenses' && subcollection != 'media'
-          && request.auth != null
+      // Itinerary subcollection — explicit rules
+      match /itinerary/{docId} {
+        allow read, write: if request.auth != null
           && (get(/databases/$(database)/documents/trips/$(tripId)).data.ownerId == request.auth.uid
               || request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.participantIds);
       }
@@ -93,14 +88,18 @@ service cloud.firestore {
 
     // Notifications collection
     match /notifications/{userId}/items/{notificationId} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['type', 'message', 'read', 'createdAt'])
+        && request.resource.data.type is string
+        && request.resource.data.read == false;
       allow read, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Invitations collection
     match /invitations/{invitationId} {
       allow create: if request.auth != null
-        && request.resource.data.fromUserId == request.auth.uid;
+        && request.resource.data.fromUserId == request.auth.uid
+        && get(/databases/$(database)/documents/trips/$(request.resource.data.tripId)).data.ownerId == request.auth.uid;
 
       allow read: if request.auth != null
         && (resource.data.fromUserId == request.auth.uid

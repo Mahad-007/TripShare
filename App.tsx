@@ -1,65 +1,80 @@
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { TripProvider } from './contexts/TripContext';
+import { ToastProvider } from './components/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import TripDetail from './pages/TripDetail';
-import AddTripPage from './pages/AddTripPage';
-import ExpensesPage from './pages/ExpensesPage';
-import MapsPage from './pages/MapsPage';
-import GalleryPage from './pages/GalleryPage';
-import ProfilePage from './pages/ProfilePage';
-import ExplorePage from './pages/ExplorePage';
-import LoginPage from './pages/LoginPage';
-import RegistrationPage from './pages/RegistrationPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import EditTripPage from './pages/EditTripPage';
-import SettingsPage from './pages/SettingsPage';
-import NotificationsPage from './pages/NotificationsPage';
-import TravelCirclePage from './pages/TravelCirclePage';
+
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const TripDetail = React.lazy(() => import('./pages/TripDetail'));
+const AddTripPage = React.lazy(() => import('./pages/AddTripPage'));
+const EditTripPage = React.lazy(() => import('./pages/EditTripPage'));
+const ExpensesPage = React.lazy(() => import('./pages/ExpensesPage'));
+const MapsPage = React.lazy(() => import('./pages/MapsPage'));
+const GalleryPage = React.lazy(() => import('./pages/GalleryPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const ExplorePage = React.lazy(() => import('./pages/ExplorePage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const NotificationsPage = React.lazy(() => import('./pages/NotificationsPage'));
+const TravelCirclePage = React.lazy(() => import('./pages/TravelCirclePage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const RegistrationPage = React.lazy(() => import('./pages/RegistrationPage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-slate-50">
+    <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600"></div>
+  </div>
+);
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <TripProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegistrationPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <TripProvider>
+            <ToastProvider>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegistrationPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-            {/* Protected routes with Layout */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="trip/:tripId" element={<TripDetail />} />
-              <Route path="add-trip" element={<AddTripPage />} />
-              <Route path="edit-trip/:tripId" element={<EditTripPage />} />
-              <Route path="expenses" element={<ExpensesPage />} />
-              <Route path="maps" element={<MapsPage />} />
-              <Route path="gallery" element={<GalleryPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="explore" element={<ExplorePage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="travel-circle" element={<TravelCirclePage />} />
-            </Route>
+                  {/* Protected routes with Layout */}
+                  <Route
+                    element={
+                      <ProtectedRoute>
+                        <Layout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<Dashboard />} />
+                    <Route path="trip/:tripId" element={<TripDetail />} />
+                    <Route path="add-trip" element={<AddTripPage />} />
+                    <Route path="edit-trip/:tripId" element={<EditTripPage />} />
+                    <Route path="expenses" element={<ExpensesPage />} />
+                    <Route path="maps" element={<MapsPage />} />
+                    <Route path="gallery" element={<GalleryPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
+                    <Route path="explore" element={<ExplorePage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                    <Route path="notifications" element={<NotificationsPage />} />
+                    <Route path="travel-circle" element={<TravelCirclePage />} />
+                  </Route>
 
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </TripProvider>
-      </AuthProvider>
-    </BrowserRouter>
+                  {/* Catch-all */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </ToastProvider>
+          </TripProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

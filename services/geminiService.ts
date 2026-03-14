@@ -1,3 +1,6 @@
+// NOTE: VITE_OPENROUTER_API_KEY is exposed client-side in this prototype.
+// In production, AI API calls should be routed through a Firebase Cloud Function
+// to protect the API key from abuse.
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'google/gemini-2.0-flash-001';

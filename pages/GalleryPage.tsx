@@ -9,6 +9,7 @@ import { subscribeToMedia, deleteMedia } from '../services/mediaService';
 import UploadMediaModal from '../components/UploadMediaModal';
 import MediaLightbox from '../components/MediaLightbox';
 import { Media } from '../types';
+import { useToast } from '../hooks/useToast';
 
 const GalleryPage: React.FC = () => {
   const { trips } = useTrips();
@@ -22,6 +23,7 @@ const GalleryPage: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const { showToast } = useToast();
   const activeTripId = selectedTripId || trips[0]?.id || '';
   const selectedTrip = trips.find(t => t.id === activeTripId);
   const role = selectedTrip && user ? getUserRole(selectedTrip, user.id) : 'none';
@@ -51,7 +53,10 @@ const GalleryPage: React.FC = () => {
     setDeleting(true);
     try {
       await deleteMedia(activeTripId, m.id, m.url, m.thumbnailUrl);
-    } catch { /* real-time listener keeps UI consistent */ }
+      showToast('Media deleted', 'success');
+    } catch {
+      showToast('Failed to delete media', 'error');
+    }
     setDeleting(false);
     setShowDeleteConfirm(null);
     if (lightboxMedia?.id === m.id) setLightboxMedia(null);
@@ -157,6 +162,7 @@ const GalleryPage: React.FC = () => {
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }}
                   className="absolute top-3 left-3 p-1.5 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500"
+                  aria-label="Delete media"
                 >
                   <Trash2 size={14} className="text-white" />
                 </button>
@@ -190,6 +196,7 @@ const GalleryPage: React.FC = () => {
         <button
           onClick={() => setShowUploadModal(true)}
           className="fixed bottom-24 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-200 flex items-center justify-center active:scale-95 transition-transform z-40"
+          aria-label="Upload media"
         >
           <Camera size={28} />
         </button>
