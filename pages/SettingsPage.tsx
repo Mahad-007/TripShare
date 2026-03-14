@@ -5,10 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { db, auth } from '../services/firebase';
+import { useToast } from '../hooks/useToast';
 
 const SettingsPage: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [defaultPublic, setDefaultPublic] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
@@ -46,7 +48,7 @@ const SettingsPage: React.FC = () => {
       await setDoc(doc(db, 'users', user.id), { defaultPublic: newValue }, { merge: true });
       setDefaultPublic(newValue);
     } catch {
-      // Revert on error
+      showToast('Failed to update privacy setting', 'error');
     } finally {
       setSaving(false);
     }
@@ -90,7 +92,7 @@ const SettingsPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 pb-20">
       {/* Top Bar */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md px-6 py-4 flex items-center border-b border-slate-200">
-        <button onClick={() => navigate('/profile')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
+        <button onClick={() => navigate('/profile')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full" aria-label="Go back">
           <ChevronLeft size={24} />
         </button>
         <h2 className="ml-2 font-bold text-lg">Settings</h2>
@@ -131,6 +133,7 @@ const SettingsPage: React.FC = () => {
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="w-full flex items-center justify-between p-4 hover:bg-rose-50 transition-colors"
+              aria-label="Delete account"
             >
               <div className="flex items-center space-x-4">
                 <div className="bg-rose-50 text-rose-600 p-2.5 rounded-xl">

@@ -7,11 +7,13 @@ import { uploadAvatar } from '../services/storageService';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { getFollowerCount, getFollowingCount } from '../services/socialService';
+import { useToast } from '../hooks/useToast';
 
 const ProfilePage: React.FC = () => {
   const { user, logout, updateProfile } = useAuth();
   const { trips } = useTrips();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -105,7 +107,7 @@ const ProfilePage: React.FC = () => {
       await updateProfile({ displayName: newName.trim() });
       setEditingName(false);
     } catch {
-      // Keep editing open on error
+      showToast('Failed to update name', 'error');
     } finally {
       setSavingName(false);
     }
@@ -154,6 +156,7 @@ const ProfilePage: React.FC = () => {
             onClick={handleAvatarClick}
             disabled={uploadingAvatar}
             className="absolute bottom-1 right-1 bg-indigo-600 text-white p-2 rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            aria-label="Change profile photo"
           >
             <Camera size={14} />
           </button>

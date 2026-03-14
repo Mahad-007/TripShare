@@ -73,7 +73,7 @@ const NotificationsPage: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-slate-50">
       {/* Top Bar */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl hover:bg-slate-100 transition-colors" aria-label="Go back">
           <ChevronLeft size={20} className="text-slate-600" />
         </button>
         <h2 className="font-bold text-slate-800">Notifications</h2>
@@ -82,6 +82,7 @@ const NotificationsPage: React.FC = () => {
           disabled={!hasUnread}
           className="p-2 -mr-2 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-30"
           title="Mark all read"
+          aria-label="Mark all as read"
         >
           <CheckCheck size={20} className="text-indigo-600" />
         </button>

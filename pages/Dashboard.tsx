@@ -6,6 +6,7 @@ import { useTrips } from '../contexts/TripContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Invitation } from '../types';
 import { subscribeToInvitations, acceptInvitation, declineInvitation } from '../services/invitationService';
+import { useToast } from '../hooks/useToast';
 import { Unsubscribe } from 'firebase/firestore';
 
 const STATUS_OPTIONS = ['all', 'draft', 'active', 'completed', 'archived'] as const;
@@ -13,6 +14,7 @@ const STATUS_OPTIONS = ['all', 'draft', 'active', 'completed', 'archived'] as co
 const Dashboard: React.FC = () => {
   const { trips, loading } = useTrips();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -36,7 +38,10 @@ const Dashboard: React.FC = () => {
     setRespondingId(id);
     try {
       await acceptInvitation(id);
-    } catch { /* real-time listener handles UI */ }
+      showToast('Invitation accepted', 'success');
+    } catch {
+      showToast('Failed to accept invitation', 'error');
+    }
     setRespondingId(null);
   };
 
@@ -44,7 +49,10 @@ const Dashboard: React.FC = () => {
     setRespondingId(id);
     try {
       await declineInvitation(id);
-    } catch { /* real-time listener handles UI */ }
+      showToast('Invitation declined', 'info');
+    } catch {
+      showToast('Failed to decline invitation', 'error');
+    }
     setRespondingId(null);
   };
 
