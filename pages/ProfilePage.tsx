@@ -6,6 +6,7 @@ import { useTrips } from '../contexts/TripContext';
 import { uploadAvatar } from '../services/storageService';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { getFollowerCount, getFollowingCount } from '../services/socialService';
 
 const ProfilePage: React.FC = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -24,6 +25,9 @@ const ProfilePage: React.FC = () => {
   // Photo count
   const [photoCount, setPhotoCount] = useState(0);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
+
+  // Circle count
+  const [circleCount, setCircleCount] = useState(0);
 
   useEffect(() => {
     if (!trips.length) {
@@ -49,6 +53,16 @@ const ProfilePage: React.FC = () => {
     fetchPhotoCounts();
     return () => { cancelled = true; };
   }, [trips]);
+
+  // Fetch circle counts
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    Promise.all([getFollowerCount(user.id), getFollowingCount(user.id)])
+      .then(([followers, following]) => { if (!cancelled) setCircleCount(followers + following); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
 
   const completedCount = trips.filter((t) => t.status === 'completed').length;
 
@@ -103,9 +117,9 @@ const ProfilePage: React.FC = () => {
   };
 
   const menuItems = [
-    { icon: Bell, label: 'Notifications', color: 'text-indigo-600', bg: 'bg-indigo-50', disabled: true },
+    { icon: Bell, label: 'Notifications', color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => navigate('/notifications') },
     { icon: Shield, label: 'Trust & Safety', color: 'text-emerald-600', bg: 'bg-emerald-50', action: () => navigate('/settings') },
-    { icon: Users, label: 'Travel Circle', color: 'text-violet-600', bg: 'bg-violet-50', disabled: true },
+    { icon: Users, label: 'Travel Circle', color: 'text-violet-600', bg: 'bg-violet-50', action: () => navigate('/travel-circle') },
     { icon: HelpCircle, label: 'Get Help', color: 'text-amber-600', bg: 'bg-amber-50', disabled: true },
   ];
 
@@ -113,6 +127,7 @@ const ProfilePage: React.FC = () => {
     { icon: Grid, label: 'My Trips', count: String(trips.length) },
     { icon: Camera, label: 'Photos', count: loadingPhotos ? '...' : String(photoCount) },
     { icon: CheckCircle, label: 'Completed', count: String(completedCount) },
+    { icon: Users, label: 'Circle', count: String(circleCount) },
   ];
 
   if (!user) return null;
@@ -191,7 +206,7 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col items-center justify-center space-y-1 shadow-sm">
             <stat.icon size={18} className="text-indigo-600 mb-1" />

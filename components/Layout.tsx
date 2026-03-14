@@ -1,7 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Home, Compass, Receipt, Image, User, PlusCircle } from 'lucide-react';
+import { Home, Compass, Receipt, Image, User, PlusCircle, Bell } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { subscribeToUnreadCount } from '../services/notificationService';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -13,18 +15,40 @@ const navItems = [
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const unsubRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    unsubRef.current = subscribeToUnreadCount(user.id, setUnreadCount);
+    return () => { unsubRef.current?.(); };
+  }, [user]);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 max-w-md mx-auto relative shadow-2xl overflow-hidden border-x border-slate-200">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-indigo-600 tracking-tight">TripShare</h1>
-        <button
-          onClick={() => navigate('/add-trip')}
-          className="bg-indigo-600 p-2 rounded-full text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
-        >
-          <PlusCircle size={20} />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative p-2 rounded-full hover:bg-slate-100 transition-colors"
+          >
+            <Bell size={20} className="text-slate-600" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => navigate('/add-trip')}
+            className="bg-indigo-600 p-2 rounded-full text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
+          >
+            <PlusCircle size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Content */}

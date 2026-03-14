@@ -177,3 +177,29 @@ export interface FirestoreInvitation {
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
 }
+
+export type NotificationType =
+  | 'invitation'
+  | 'invitation_accepted'
+  | 'expense_added'
+  | 'expense_updated'
+  | 'expense_deleted'
+  | 'media_uploaded'
+  | 'new_follower';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  data: Record<string, string>;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface FirestoreNotification {
+  type: NotificationType;
+  message: string;
+  data: Record<string, string>;
+  read: boolean;
+  createdAt: string;
+}

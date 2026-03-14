@@ -310,8 +310,12 @@ export function subscribeToMedia(
 
 export interface ExplorePost {
   id: string;
+  tripId: string;
+  mediaId: string;
   tripTitle: string;
   destination: string;
+  startDate: string;
+  ownerId: string;
   ownerName: string;
   ownerAvatar?: string;
   media: Media;
@@ -355,8 +359,12 @@ export async function fetchPublicTripMedia(limitCount: number = 15): Promise<Exp
       const data = mediaDoc.data();
       posts.push({
         id: `${tripDoc.id}_${mediaDoc.id}`,
+        tripId: tripDoc.id,
+        mediaId: mediaDoc.id,
         tripTitle: tripData.title || '',
         destination: tripData.destination || '',
+        startDate: tripData.startDate || '',
+        ownerId: tripData.ownerId || '',
         ownerName,
         ownerAvatar,
         media: {

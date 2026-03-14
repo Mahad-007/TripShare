@@ -18,6 +18,8 @@ import RegistrationPage from './pages/RegistrationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import EditTripPage from './pages/EditTripPage';
 import SettingsPage from './pages/SettingsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import TravelCirclePage from './pages/TravelCirclePage';
 
 const App: React.FC = () => {
   return (
@@ -48,6 +50,8 @@ const App: React.FC = () => {
               <Route path="profile" element={<ProfilePage />} />
               <Route path="explore" element={<ExplorePage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="travel-circle" element={<TravelCirclePage />} />
             </Route>
 
             {/* Catch-all */}
