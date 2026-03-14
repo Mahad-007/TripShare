@@ -1,12 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Sparkles, MapPin, Calendar, CheckCircle2, Pencil, Trash2, UserPlus, X, Users } from 'lucide-react';
+import { ChevronLeft, Sparkles, MapPin, Calendar, CheckCircle2, Pencil, Trash2, UserPlus, X, Users, Download } from 'lucide-react';
 import { getSmartItinerary } from '../services/geminiService';
 import { useTrips } from '../contexts/TripContext';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserRole, addParticipantByEmail, removeParticipant } from '../services/tripService';
-import { Trip } from '../types';
+import { getUserRole, removeParticipant } from '../services/tripService';
+import { sendInvitation } from '../services/invitationService';
+import { subscribeToExpenses } from '../services/expenseService';
+import { generateTripReportPDF } from '../services/reportService';
+import { Trip, Expense } from '../types';
 
 const TripDetail: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
@@ -19,6 +22,9 @@ const TripDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Expenses for report export
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Participant management
   const [participantEmail, setParticipantEmail] = useState('');
@@ -35,6 +41,15 @@ const TripDetail: React.FC = () => {
       refreshTrip(tripId).then((fetched) => setTrip(fetched ?? null));
     }
   }, [tripId, getTripById, refreshTrip]);
+
+  // Subscribe to expenses for report export
+  useEffect(() => {
+    if (!tripId) return;
+    const unsub = subscribeToExpenses(tripId, (newExpenses) => {
+      setExpenses(newExpenses);
+    });
+    return unsub;
+  }, [tripId]);
 
   // Keep trip in sync with context updates
   const contextTrip = getTripById(tripId || '');
@@ -87,22 +102,28 @@ const TripDetail: React.FC = () => {
 
   const handleAddParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!participantEmail.trim()) return;
+    if (!participantEmail.trim() || !user) return;
     setAddingParticipant(true);
     setParticipantError('');
     setParticipantSuccess('');
     try {
-      const result = await addParticipantByEmail(trip.id, participantEmail.trim());
+      const result = await sendInvitation(trip.id, trip.title, user.id, user.name, participantEmail.trim());
       if (result.success) {
-        setParticipantSuccess('User added successfully!');
+        setParticipantSuccess('Invitation sent!');
         setParticipantEmail('');
       } else {
-        setParticipantError(result.error || 'Failed to add participant.');
+        setParticipantError(result.error || 'Failed to send invitation.');
       }
     } catch {
-      setParticipantError('Failed to add participant.');
+      setParticipantError('Failed to send invitation.');
     } finally {
       setAddingParticipant(false);
+    }
+  };
+
+  const handleExportReport = () => {
+    if (trip && expenses.length > 0) {
+      generateTripReportPDF(trip, expenses, trip.participants);
     }
   };
 
@@ -124,16 +145,26 @@ const TripDetail: React.FC = () => {
           </button>
           <h2 className="ml-2 font-bold text-lg truncate">{trip.title}</h2>
         </div>
-        {isOwner && (
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <button onClick={() => navigate(`/edit-trip/${trip.id}`)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
-              <Pencil size={18} />
-            </button>
-            <button onClick={() => setShowDeleteConfirm(true)} className="p-2 hover:bg-rose-50 rounded-full text-rose-500">
-              <Trash2 size={18} />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <button
+            onClick={handleExportReport}
+            disabled={expenses.length === 0}
+            className="p-2 hover:bg-slate-100 rounded-full text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            title={expenses.length === 0 ? 'No expenses to export' : 'Export PDF report'}
+          >
+            <Download size={18} />
+          </button>
+          {isOwner && (
+            <>
+              <button onClick={() => navigate(`/edit-trip/${trip.id}`)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+                <Pencil size={18} />
+              </button>
+              <button onClick={() => setShowDeleteConfirm(true)} className="p-2 hover:bg-rose-50 rounded-full text-rose-500">
+                <Trash2 size={18} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation */}
@@ -242,7 +273,7 @@ const TripDetail: React.FC = () => {
                   disabled={addingParticipant || !participantEmail.trim()}
                   className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50"
                 >
-                  {addingParticipant ? '...' : 'Add'}
+                  {addingParticipant ? '...' : 'Invite'}
                 </button>
               </div>
               {participantError && <p className="text-rose-500 text-xs font-medium mt-2">{participantError}</p>}

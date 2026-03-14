@@ -89,6 +89,23 @@ export async function logout() {
   await signOut(auth);
 }
 
+export async function updateUserProfile(
+  updates: { displayName?: string; photoURL?: string }
+): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Not authenticated');
+
+  await updateProfile(currentUser, updates);
+
+  const firestoreUpdates: Record<string, string> = {};
+  if (updates.displayName) firestoreUpdates.name = updates.displayName;
+  if (updates.photoURL) firestoreUpdates.avatar = updates.photoURL;
+
+  if (Object.keys(firestoreUpdates).length > 0) {
+    await setDoc(doc(db, 'users', currentUser.uid), firestoreUpdates, { merge: true });
+  }
+}
+
 export function onAuthChange(callback: (user: FirebaseUser | null) => void) {
   return onAuthStateChanged(auth, callback);
 }

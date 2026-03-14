@@ -9,13 +9,15 @@ import {
   query,
   where,
   onSnapshot,
-  arrayUnion,
   arrayRemove,
   orderBy,
+  writeBatch,
   Unsubscribe,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { ref, deleteObject } from 'firebase/storage';
+import { db, storage } from './firebase';
 import { Trip, FirestoreTrip, TripFormData, User } from '../types';
+import { deleteCoverImage, isStorageUrl } from './storageService';
 
 // Module-level user cache to avoid redundant reads
 const userCache = new Map<string, User>();
@@ -106,6 +108,59 @@ export async function updateTrip(tripId: string, data: Partial<FirestoreTrip>): 
 }
 
 export async function deleteTrip(tripId: string): Promise<void> {
+  // Clean up cover image from Storage if applicable
+  const tripSnap = await getDoc(doc(db, 'trips', tripId));
+  if (tripSnap.exists()) {
+    const data = tripSnap.data() as FirestoreTrip;
+    if (data.coverImage && isStorageUrl(data.coverImage)) {
+      deleteCoverImage(data.coverImage).catch(() => {});
+    }
+  }
+
+  // Cascade delete: remove all expenses in the subcollection first
+  const expensesSnap = await getDocs(collection(db, 'trips', tripId, 'expenses'));
+  const expenseDocs = expensesSnap.docs;
+
+  for (let i = 0; i < expenseDocs.length; i += 499) {
+    const batch = writeBatch(db);
+    const chunk = expenseDocs.slice(i, i + 499);
+    chunk.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // Cascade delete: remove all media in the subcollection
+  const mediaSnap = await getDocs(collection(db, 'trips', tripId, 'media'));
+  const mediaDocs = mediaSnap.docs;
+
+  for (let i = 0; i < mediaDocs.length; i += 499) {
+    const batch = writeBatch(db);
+    const chunk = mediaDocs.slice(i, i + 499);
+    chunk.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // Clean up media Storage files
+  for (const mediaDoc of mediaDocs) {
+    const mData = mediaDoc.data();
+    if (mData.url && isStorageUrl(mData.url)) {
+      deleteObject(ref(storage, mData.url)).catch(() => {});
+    }
+    if (mData.thumbnailUrl && mData.thumbnailUrl !== mData.url && isStorageUrl(mData.thumbnailUrl)) {
+      deleteObject(ref(storage, mData.thumbnailUrl)).catch(() => {});
+    }
+  }
+
+  // Clean up pending invitations for this trip
+  const invSnap = await getDocs(
+    query(collection(db, 'invitations'), where('tripId', '==', tripId))
+  );
+  for (let i = 0; i < invSnap.docs.length; i += 499) {
+    const batch = writeBatch(db);
+    const chunk = invSnap.docs.slice(i, i + 499);
+    chunk.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
   await deleteDoc(doc(db, 'trips', tripId));
 }
 
@@ -136,36 +191,6 @@ export function subscribeToUserTrips(
     }
     callback(trips);
   });
-}
-
-export async function addParticipantByEmail(
-  tripId: string,
-  email: string
-): Promise<{ success: boolean; error?: string }> {
-  const q = query(collection(db, 'users'), where('email', '==', email));
-  const snapshot = await getDocs(q);
-
-  if (snapshot.empty) {
-    return { success: false, error: 'No user found with this email.' };
-  }
-
-  const userId = snapshot.docs[0].id;
-
-  // Check if already a participant
-  const tripSnap = await getDoc(doc(db, 'trips', tripId));
-  if (tripSnap.exists()) {
-    const tripData = tripSnap.data() as FirestoreTrip;
-    if (tripData.participantIds.includes(userId)) {
-      return { success: false, error: 'User is already a participant.' };
-    }
-  }
-
-  await updateDoc(doc(db, 'trips', tripId), {
-    participantIds: arrayUnion(userId),
-    updatedAt: new Date().toISOString(),
-  });
-
-  return { success: true };
 }
 
 export async function removeParticipant(tripId: string, userId: string): Promise<void> {

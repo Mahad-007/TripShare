@@ -1,24 +1,64 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, MapPin, AlignLeft, Image as ImageIcon, ChevronRight, Globe } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
+import { useAuth } from '../contexts/AuthContext';
+import { DEFAULT_COVER_IMAGE } from '../types';
+import { uploadCoverImage } from '../services/storageService';
 
 const AddTripPage: React.FC = () => {
   const navigate = useNavigate();
   const { addTrip } = useTrips();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     title: '',
     destination: '',
     startDate: '',
     endDate: '',
     description: '',
-    coverImage: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=800',
+    coverImage: DEFAULT_COVER_IMAGE,
     isPublic: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState(DEFAULT_COVER_IMAGE);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (selectedFile && previewUrl !== DEFAULT_COVER_IMAGE) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [selectedFile, previewUrl]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setSubmitError('Invalid file type. Please upload a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError('File is too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setSubmitError('');
+    // Revoke old preview if exists
+    if (selectedFile && previewUrl !== DEFAULT_COVER_IMAGE) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -54,10 +94,16 @@ const AddTripPage: React.FC = () => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const tripId = await addTrip(formData);
+      let coverImage = formData.coverImage;
+      if (selectedFile && user) {
+        setUploadProgress(0);
+        coverImage = await uploadCoverImage(selectedFile, user.id, setUploadProgress);
+      }
+      const tripId = await addTrip({ ...formData, coverImage });
       navigate(`/trip/${tripId}`);
-    } catch {
-      setSubmitError('Failed to create trip. Please try again.');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to create trip. Please try again.');
+      setUploadProgress(null);
     } finally {
       setSubmitting(false);
     }
@@ -87,9 +133,12 @@ const AddTripPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto no-scrollbar">
         {/* Banner Preview */}
-        <div className="relative h-44 rounded-3xl overflow-hidden group cursor-pointer">
+        <div
+          className="relative h-44 rounded-3xl overflow-hidden group cursor-pointer"
+          onClick={() => fileInputRef.current?.click()}
+        >
           <img
-            src={formData.coverImage}
+            src={previewUrl}
             alt="Preview"
             className="w-full h-full object-cover"
           />
@@ -99,6 +148,13 @@ const AddTripPage: React.FC = () => {
               <span className="text-xs font-bold uppercase tracking-wider">Change Cover</span>
             </div>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </div>
 
         <div className="space-y-4">
@@ -203,7 +259,11 @@ const AddTripPage: React.FC = () => {
           className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-xl shadow-indigo-100 active:scale-[0.98] transition-all disabled:opacity-50"
         >
           {submitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+            uploadProgress !== null ? (
+              <span>Uploading... {uploadProgress}%</span>
+            ) : (
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+            )
           ) : (
             <>
               <span>Start Exploring</span>

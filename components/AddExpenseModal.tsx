@@ -9,6 +9,8 @@ interface AddExpenseModalProps {
   currentUserId: string;
   onClose: () => void;
   editingExpense?: Expense;
+  participantIds?: string[];
+  tripTitle?: string;
 }
 
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
@@ -17,6 +19,8 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   currentUserId,
   onClose,
   editingExpense,
+  participantIds,
+  tripTitle,
 }) => {
   const isEdit = !!editingExpense;
 
@@ -69,9 +73,9 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           payerId: cleanData.payerId,
           date: cleanData.date,
           participants: cleanData.participants,
-        });
+        }, currentUserId, participantIds, tripTitle);
       } else {
-        await addExpense(tripId, cleanData, currentUserId);
+        await addExpense(tripId, cleanData, currentUserId, participantIds, tripTitle);
       }
       onClose();
     } catch {

@@ -8,7 +8,9 @@ import {
   resetPassword as resetPasswordService,
   logout as logoutService,
   onAuthChange,
+  updateUserProfile,
 } from '../services/authService';
+import { auth } from '../services/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +19,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateProfile: (updates: { displayName?: string; photoURL?: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -94,8 +97,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await resetPasswordService(email);
   };
 
+  const updateProfileHandler = async (updates: { displayName?: string; photoURL?: string }) => {
+    await updateUserProfile(updates);
+    if (auth.currentUser) {
+      setUser(mapFirebaseUser(auth.currentUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, resetPassword, logout: handleLogout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, resetPassword, updateProfile: updateProfileHandler, logout: handleLogout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,6 +8,7 @@ import { useTrips } from '../contexts/TripContext';
 import { useAuth } from '../contexts/AuthContext';
 import { subscribeToExpenses, deleteExpense } from '../services/expenseService';
 import { getUserRole } from '../services/tripService';
+import { exportExpensesCSV } from '../services/reportService';
 import AddExpenseModal from '../components/AddExpenseModal';
 import { Unsubscribe } from 'firebase/firestore';
 
@@ -135,39 +136,16 @@ const ExpensesPage: React.FC = () => {
     setIsSummarizing(false);
   };
 
-  const handleExportSummary = () => {
-    const lines: string[] = [];
-    lines.push(`Expense Summary — ${selectedTrip.title}`);
-    lines.push(`Trip: ${selectedTrip.destination}`);
-    lines.push(`Exported: ${new Date().toLocaleDateString()}`);
-    if (dateFilter) lines.push(`Filter: ${dateFilter}`);
-    lines.push(`Total: Rs. ${totalSpent.toLocaleString()}`);
-    lines.push('');
-    lines.push('--- Transactions ---');
-    filteredExpenses.forEach((exp) => {
-      const payerName = selectedTrip.participants.find(p => p.id === exp.payerId)?.name || 'Unknown';
-      lines.push(`${exp.date} | ${exp.description} | Rs. ${exp.amount} | Paid by ${payerName} | Split ${exp.participants.length}`);
-    });
-    lines.push('');
-    lines.push('--- Balances ---');
-    selectedTrip.participants.forEach((p) => {
-      const bal = balances[p.id] || 0;
-      lines.push(`${p.name}: ${bal >= 0 ? '+' : ''}Rs. ${Math.round(bal)}`);
-    });
-
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `expenses-${selectedTrip.title.replace(/\s+/g, '-').toLowerCase()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExportCSV = () => {
+    if (selectedTrip) {
+      exportExpensesCSV(selectedTrip, filteredExpenses, selectedTrip.participants);
+    }
   };
 
   const handleDeleteExpense = async (expenseId: string) => {
     setDeleting(true);
     try {
-      await deleteExpense(activeTripId, expenseId);
+      await deleteExpense(activeTripId, expenseId, currentUserId, selectedTrip?.participantIds, selectedTrip?.title);
     } catch {
       // Error — the real-time listener will keep showing the expense
     } finally {
@@ -361,9 +339,9 @@ const ExpensesPage: React.FC = () => {
                 className="bg-white border border-slate-100 py-2 px-3 rounded-xl text-xs font-medium text-slate-500 outline-none"
               />
               <button
-                onClick={handleExportSummary}
+                onClick={handleExportCSV}
                 className="p-2 bg-white rounded-xl border border-slate-100 text-slate-400 hover:text-indigo-600 transition-colors"
-                title="Export summary"
+                title="Export CSV"
               >
                 <Download size={16} />
               </button>
@@ -452,6 +430,8 @@ const ExpensesPage: React.FC = () => {
           currentUserId={currentUserId}
           onClose={() => { setShowModal(false); setEditingExpense(null); }}
           editingExpense={editingExpense || undefined}
+          participantIds={selectedTrip.participantIds}
+          tripTitle={selectedTrip.title}
         />
       )}
 

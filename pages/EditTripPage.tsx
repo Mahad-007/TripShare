@@ -1,16 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar, MapPin, AlignLeft, ChevronRight, Globe } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, AlignLeft, Image as ImageIcon, ChevronRight, Globe } from 'lucide-react';
 import { useTrips } from '../contexts/TripContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Trip } from '../types';
+import { uploadCoverImage, deleteCoverImage, isStorageUrl } from '../services/storageService';
 
 const EditTripPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
   const { getTripById, refreshTrip, updateTrip } = useTrips();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [trip, setTrip] = useState<Trip | null | undefined>(undefined);
   const [formData, setFormData] = useState({
@@ -26,6 +28,9 @@ const EditTripPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     if (!tripId) return;
@@ -42,6 +47,7 @@ const EditTripPage: React.FC = () => {
         isPublic: cached.isPublic,
         status: cached.status,
       });
+      setPreviewUrl(cached.coverImage);
     } else {
       refreshTrip(tripId).then((fetched) => {
         if (fetched) {
@@ -56,12 +62,22 @@ const EditTripPage: React.FC = () => {
             isPublic: fetched.isPublic,
             status: fetched.status,
           });
+          setPreviewUrl(fetched.coverImage);
         } else {
           setTrip(null);
         }
       });
     }
   }, [tripId, getTripById, refreshTrip]);
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (selectedFile && previewUrl && !previewUrl.startsWith('http')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [selectedFile, previewUrl]);
 
   // Owner check
   if (trip && user && trip.ownerId !== user.id) {
@@ -85,6 +101,28 @@ const EditTripPage: React.FC = () => {
       </div>
     );
   }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setSubmitError('Invalid file type. Please upload a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError('File is too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setSubmitError('');
+    // Revoke old object URL preview if exists
+    if (selectedFile && previewUrl && !previewUrl.startsWith('http')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -116,19 +154,34 @@ const EditTripPage: React.FC = () => {
     setSubmitting(true);
     setSubmitError('');
     try {
+      let coverImage = formData.coverImage;
+      const oldCoverImage = trip.coverImage;
+
+      if (selectedFile && user) {
+        setUploadProgress(0);
+        coverImage = await uploadCoverImage(selectedFile, user.id, setUploadProgress);
+      }
+
       await updateTrip(tripId!, {
         title: formData.title,
         destination: formData.destination,
         startDate: formData.startDate,
         endDate: formData.endDate,
         description: formData.description,
-        coverImage: formData.coverImage,
+        coverImage,
         isPublic: formData.isPublic,
         status: formData.status,
       });
+
+      // Clean up old cover image after successful update
+      if (selectedFile && oldCoverImage && isStorageUrl(oldCoverImage)) {
+        deleteCoverImage(oldCoverImage).catch(() => {});
+      }
+
       navigate(`/trip/${tripId}`);
-    } catch {
-      setSubmitError('Failed to update trip. Please try again.');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to update trip. Please try again.');
+      setUploadProgress(null);
     } finally {
       setSubmitting(false);
     }
@@ -156,6 +209,31 @@ const EditTripPage: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto no-scrollbar">
+        {/* Banner Preview */}
+        <div
+          className="relative h-44 rounded-3xl overflow-hidden group cursor-pointer"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <img
+            src={previewUrl}
+            alt="Cover preview"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl text-white flex items-center space-x-2">
+              <ImageIcon size={20} />
+              <span className="text-xs font-bold uppercase tracking-wider">Change Cover</span>
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
+
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Trip Name</label>
@@ -271,7 +349,11 @@ const EditTripPage: React.FC = () => {
           className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-xl shadow-indigo-100 active:scale-[0.98] transition-all disabled:opacity-50"
         >
           {submitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+            uploadProgress !== null ? (
+              <span>Uploading... {uploadProgress}%</span>
+            ) : (
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+            )
           ) : (
             <>
               <span>Save Changes</span>

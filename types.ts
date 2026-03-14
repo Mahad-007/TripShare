@@ -1,3 +1,4 @@
+export const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=800';
 
 export interface User {
   id: string;
@@ -42,10 +43,35 @@ export interface Media {
   id: string;
   tripId: string;
   url: string;
+  thumbnailUrl: string;
+  storagePath?: string;
   type: 'image' | 'video';
+  caption: string;
   uploadedBy: string;
   blockchainHash?: string;
   isVerified: boolean;
+  date: string;
+  createdAt: string;
+}
+
+// Firestore document shape for media (no id, no tripId — implicit in subcollection path)
+export interface FirestoreMedia {
+  url: string;
+  thumbnailUrl: string;
+  storagePath?: string;
+  type: 'image' | 'video';
+  caption: string;
+  uploadedBy: string;
+  blockchainHash?: string;
+  isVerified: boolean;
+  date: string;
+  createdAt: string;
+}
+
+// Form input shape for media upload
+export interface MediaFormData {
+  file: File;
+  caption: string;
   date: string;
 }
 
@@ -100,4 +126,54 @@ export interface ItineraryItem {
   time: string;
   location: string;
   notes?: string;
+}
+
+export interface VerificationResult {
+  status: 'valid' | 'tampered' | 'error' | 'no_hash';
+  currentHash?: string;
+  storedHash?: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface VerificationLogEntry {
+  id: string;
+  mediaId: string;
+  tripId: string;
+  hash: string;
+  verifiedBy: string;
+  status: 'initial' | 'valid' | 'tampered' | 'error' | 'hash_generated';
+  timestamp: string;
+}
+
+export interface FirestoreVerificationLog {
+  mediaId: string;
+  tripId: string;
+  hash: string;
+  verifiedBy: string;
+  status: 'initial' | 'valid' | 'tampered' | 'error' | 'hash_generated';
+  timestamp: string;
+}
+
+export interface Invitation {
+  id: string;
+  tripId: string;
+  tripTitle: string;
+  fromUserId: string;
+  fromUserName: string;
+  toUserId: string;
+  toEmail: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+}
+
+export interface FirestoreInvitation {
+  tripId: string;
+  tripTitle: string;
+  fromUserId: string;
+  fromUserName: string;
+  toUserId: string;
+  toEmail: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
 }

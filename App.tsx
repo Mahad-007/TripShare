@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import EditTripPage from './pages/EditTripPage';
+import SettingsPage from './pages/SettingsPage';
 
 const App: React.FC = () => {
   return (
@@ -46,6 +47,7 @@ const App: React.FC = () => {
               <Route path="gallery" element={<GalleryPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="explore" element={<ExplorePage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
 
             {/* Catch-all */}
