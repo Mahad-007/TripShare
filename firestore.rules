@@ -58,15 +58,18 @@ service cloud.firestore {
 
       // Media subcollection — granular rules
       match /media/{mediaId} {
-        // Read access: trip owner, participants, anyone when the trip itself is public,
-        // OR anyone when THIS media doc is marked public (per-media visibility). The
-        // per-media branch is what lets Explore's collectionGroup query return public
-        // photos even from a private parent trip.
+        // Read access. IMPORTANT: per-media `isPublic` MUST be the first OR branch so
+        // the collectionGroup query used by the Explore feed short-circuits before any
+        // `get()` calls fire. Firestore caps access calls at 20 per query — evaluating
+        // a trip `get()` once per matched doc blows that cap and also errors on
+        // orphaned docs (trips that were deleted). Keeping this branch first means the
+        // Explore hot path performs zero `get()` calls; only in-app gallery reads of
+        // private media evaluate the trip-scoped branches.
         allow read: if request.auth != null
-          && (get(/databases/$(database)/documents/trips/$(tripId)).data.ownerId == request.auth.uid
+          && (resource.data.isPublic == true
+              || get(/databases/$(database)/documents/trips/$(tripId)).data.ownerId == request.auth.uid
               || request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.participantIds
-              || get(/databases/$(database)/documents/trips/$(tripId)).data.isPublic == true
-              || resource.data.isPublic == true);
+              || get(/databases/$(database)/documents/trips/$(tripId)).data.isPublic == true);
 
         allow create: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.participantIds
