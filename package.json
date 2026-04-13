@@ -15,9 +15,11 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
+    "@emailjs/browser": "^4.4.1",
     "firebase": "^12.10.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",

@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "http://localhost:3000",
+      "https://localhost",
+      "capacitor://localhost",
+      "http://localhost",
+      "https://tripshare-2e94f.web.app",
+      "https://tripshare-2e94f.firebaseapp.com"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Content-Length", "Authorization", "x-goog-resumable"]
+  }
+]

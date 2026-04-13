@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   doc,
   addDoc,
   deleteDoc,
@@ -37,7 +38,11 @@ export function validateFile(file: File): void {
   if (!file || file.size === 0) {
     throw new Error('Please select a file to upload.');
   }
-  if (!ALL_ALLOWED_TYPES.includes(file.type)) {
+  // On mobile, file.type can be empty or generic — fall back to extension check
+  const type = file.type || '';
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'mp4', 'mov', 'webm'];
+  if (!ALL_ALLOWED_TYPES.includes(type) && !type.startsWith('image/') && !type.startsWith('video/') && !validExtensions.includes(ext)) {
     throw new Error('Unsupported file type. Please upload a JPEG, PNG, or WebP image, or an MP4, MOV, or WebM video.');
   }
   if (file.size > MAX_FILE_SIZE) {
@@ -157,11 +162,13 @@ function sanitizeFilename(name: string): string {
 function uploadToStorage(
   path: string,
   data: Blob,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  contentType?: string
 ): Promise<string> {
   const storageRef = ref(storage, path);
+  const metadata = contentType ? { contentType } : undefined;
   return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, data);
+    const task = uploadBytesResumable(storageRef, data, metadata);
     task.on(
       'state_changed',
       (snapshot) => {
@@ -187,17 +194,26 @@ function deleteStorageFile(url: string): Promise<void> {
 
 // --- Main Upload Function ---
 
+export interface UploadTripContext {
+  title?: string;
+  destination?: string;
+  ownerId?: string;
+  participantIds?: string[];
+}
+
 export async function uploadMedia(
   tripId: string,
   data: MediaFormData,
   uploadedBy: string,
   onProgress?: (pct: number) => void,
-  tripParticipantIds?: string[],
-  tripTitle?: string
+  tripContext?: UploadTripContext
 ): Promise<string> {
   validateFile(data.file);
 
-  const isVideo = data.file.type.startsWith('video/');
+  // Infer type from MIME or extension (mobile file pickers may omit MIME)
+  const fileType = data.file.type || '';
+  const ext = data.file.name.split('.').pop()?.toLowerCase() || '';
+  const isVideo = fileType.startsWith('video/') || ['mp4', 'mov', 'webm'].includes(ext);
   const compressed = isVideo ? data.file : await compressImage(data.file);
   const blockchainHash = await generateFileHash(compressed);
   const thumbnail = await generateThumbnail(data.file);
@@ -207,9 +223,10 @@ export async function uploadMedia(
   const mainPath = `trips/${tripId}/media/${timestamp}_${sanitized}`;
 
   // Upload main file (80% of progress)
+  const mainContentType = isVideo ? (fileType || 'video/mp4') : 'image/jpeg';
   const mainUrl = await uploadToStorage(mainPath, compressed, (pct) => {
     onProgress?.(Math.round(pct * 0.8));
-  });
+  }, mainContentType);
 
   // Upload thumbnail (20% of progress)
   let thumbnailUrl = mainUrl;
@@ -218,7 +235,7 @@ export async function uploadMedia(
       const thumbPath = `trips/${tripId}/media/thumbs/${timestamp}_${sanitized}`;
       thumbnailUrl = await uploadToStorage(thumbPath, thumbnail, (pct) => {
         onProgress?.(80 + Math.round(pct * 0.2));
-      });
+      }, 'image/jpeg');
     } catch {
       // Use main URL as fallback
     }
@@ -234,6 +251,11 @@ export async function uploadMedia(
     uploadedBy,
     blockchainHash,
     isVerified: true,
+    isPublic: data.isPublic,
+    // Denormalize trip metadata so Explore can render without reading the parent trip
+    tripTitle: tripContext?.title || '',
+    tripDestination: tripContext?.destination || '',
+    tripOwnerId: tripContext?.ownerId || '',
     date: data.date,
     createdAt: new Date().toISOString(),
   };
@@ -245,12 +267,12 @@ export async function uploadMedia(
 
   logVerification(docRef.id, tripId, blockchainHash, uploadedBy, 'initial').catch(() => {});
 
-  if (tripParticipantIds) {
+  if (tripContext?.participantIds) {
     notifyTripParticipants(
-      tripParticipantIds,
+      tripContext.participantIds,
       uploadedBy,
       'media_uploaded',
-      `New photo uploaded to ${tripTitle || 'a trip'}`,
+      `New photo uploaded to ${tripContext.title || 'a trip'}`,
       { tripId, mediaId: docRef.id }
     ).catch(() => {});
   }
@@ -275,6 +297,27 @@ export async function deleteMedia(
 
 // --- Real-time Subscription ---
 
+function firestoreToMedia(docId: string, tripId: string, data: Record<string, unknown>): Media {
+  return {
+    id: docId,
+    tripId,
+    url: (data.url as string) || '',
+    thumbnailUrl: (data.thumbnailUrl as string) || (data.url as string) || '',
+    type: ((data.type as string) || 'image') as 'image' | 'video',
+    caption: (data.caption as string) || '',
+    uploadedBy: (data.uploadedBy as string) || '',
+    storagePath: (data.storagePath as string) || undefined,
+    blockchainHash: (data.blockchainHash as string) || undefined,
+    isVerified: (data.isVerified as boolean) ?? false,
+    isPublic: (data.isPublic as boolean) ?? false,
+    tripTitle: (data.tripTitle as string) || undefined,
+    tripDestination: (data.tripDestination as string) || undefined,
+    tripOwnerId: (data.tripOwnerId as string) || undefined,
+    date: (data.date as string) || '',
+    createdAt: (data.createdAt as string) || '',
+  };
+}
+
 export function subscribeToMedia(
   tripId: string,
   callback: (media: Media[]) => void
@@ -285,28 +328,14 @@ export function subscribeToMedia(
   );
 
   return onSnapshot(q, (snapshot) => {
-    const media: Media[] = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        tripId,
-        url: data.url || '',
-        thumbnailUrl: data.thumbnailUrl || data.url || '',
-        type: data.type || 'image',
-        caption: data.caption || '',
-        uploadedBy: data.uploadedBy || '',
-        storagePath: data.storagePath || undefined,
-        blockchainHash: data.blockchainHash || undefined,
-        isVerified: data.isVerified ?? false,
-        date: data.date || '',
-        createdAt: data.createdAt || '',
-      };
-    });
+    const media: Media[] = snapshot.docs.map((docSnap) =>
+      firestoreToMedia(docSnap.id, tripId, docSnap.data())
+    );
     callback(media);
   });
 }
 
-// --- Public Trip Media (for ExplorePage) ---
+// --- Public Media Feed (for ExplorePage) ---
 
 export interface ExplorePost {
   id: string;
@@ -321,71 +350,100 @@ export interface ExplorePost {
   media: Media;
 }
 
-export async function fetchPublicTripMedia(limitCount: number = 15): Promise<ExplorePost[]> {
-  // 1. Get public trips
-  const tripsQuery = query(
-    collection(db, 'trips'),
-    where('isPublic', '==', true),
-    firestoreLimit(20)
+/**
+ * Fetch public media across all trips using a collection-group query.
+ * Each media doc carries denormalized trip metadata (tripTitle, tripDestination,
+ * tripOwnerId) so we don't need to read the parent trip — critical because a
+ * non-member has no read permission on a private trip even if it hosts a public
+ * photo.
+ *
+ * Owner display metadata (name/avatar/startDate) is fetched separately from
+ * the users collection (any authed user can read). `startDate` is not needed
+ * for non-member rendering; we leave it blank when the trip can't be read.
+ */
+export async function fetchPublicMedia(limitCount: number = 15): Promise<ExplorePost[]> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Request timed out')), 10000)
   );
-  const tripsSnap = await getDocs(tripsQuery);
-  if (tripsSnap.empty) return [];
 
-  // 2. Fetch media from each public trip
-  const posts: ExplorePost[] = [];
-
-  for (const tripDoc of tripsSnap.docs) {
-    const tripData = tripDoc.data();
+  const fetchData = async (): Promise<ExplorePost[]> => {
     const mediaQuery = query(
-      collection(db, 'trips', tripDoc.id, 'media'),
+      collectionGroup(db, 'media'),
+      where('isPublic', '==', true),
       orderBy('createdAt', 'desc'),
-      firestoreLimit(3)
+      firestoreLimit(limitCount)
     );
     const mediaSnap = await getDocs(mediaQuery);
+    if (mediaSnap.empty) return [];
 
-    // Get owner name from users collection
-    let ownerName = 'Unknown';
-    let ownerAvatar: string | undefined;
-    try {
-      const userSnap = await getDoc(doc(db, 'users', tripData.ownerId));
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        ownerName = userData.name || 'Unknown';
-        ownerAvatar = userData.avatar;
-      }
-    } catch { /* ignore */ }
+    // Hydrate owner (name, avatar) — cached per owner to dedupe reads.
+    const ownerCache = new Map<string, { name: string; avatar?: string }>();
+    const resolveOwner = async (ownerId: string): Promise<{ name: string; avatar?: string }> => {
+      if (!ownerId) return { name: 'Unknown' };
+      const cached = ownerCache.get(ownerId);
+      if (cached) return cached;
+      try {
+        const userSnap = await getDoc(doc(db, 'users', ownerId));
+        if (userSnap.exists()) {
+          const u = userSnap.data();
+          const info = { name: u.name || 'Unknown', avatar: u.avatar as string | undefined };
+          ownerCache.set(ownerId, info);
+          return info;
+        }
+      } catch { /* ignore */ }
+      const info = { name: 'Unknown' };
+      ownerCache.set(ownerId, info);
+      return info;
+    };
 
+    // Optional trip-startDate cache (only used if we can read the trip,
+    // which is true for public trips). Non-blocking and best-effort.
+    const tripStartCache = new Map<string, string>();
+    const resolveStartDate = async (tripId: string): Promise<string> => {
+      const cached = tripStartCache.get(tripId);
+      if (cached !== undefined) return cached;
+      try {
+        const tripSnap = await getDoc(doc(db, 'trips', tripId));
+        if (tripSnap.exists()) {
+          const d = (tripSnap.data().startDate as string) || '';
+          tripStartCache.set(tripId, d);
+          return d;
+        }
+      } catch { /* no read permission for private parent trip — expected */ }
+      tripStartCache.set(tripId, '');
+      return '';
+    };
+
+    const posts: ExplorePost[] = [];
     for (const mediaDoc of mediaSnap.docs) {
       const data = mediaDoc.data();
+      // CollectionGroup path: `trips/{tripId}/media/{mediaId}`
+      const tripId = mediaDoc.ref.parent.parent?.id;
+      if (!tripId) continue;
+
+      const ownerId = (data.tripOwnerId as string) || (data.uploadedBy as string) || '';
+      const owner = await resolveOwner(ownerId);
+      const startDate = await resolveStartDate(tripId);
+
       posts.push({
-        id: `${tripDoc.id}_${mediaDoc.id}`,
-        tripId: tripDoc.id,
+        id: `${tripId}_${mediaDoc.id}`,
+        tripId,
         mediaId: mediaDoc.id,
-        tripTitle: tripData.title || '',
-        destination: tripData.destination || '',
-        startDate: tripData.startDate || '',
-        ownerId: tripData.ownerId || '',
-        ownerName,
-        ownerAvatar,
-        media: {
-          id: mediaDoc.id,
-          tripId: tripDoc.id,
-          url: data.url || '',
-          thumbnailUrl: data.thumbnailUrl || data.url || '',
-          type: data.type || 'image',
-          caption: data.caption || '',
-          uploadedBy: data.uploadedBy || '',
-          storagePath: data.storagePath || undefined,
-          blockchainHash: data.blockchainHash || undefined,
-          isVerified: data.isVerified ?? false,
-          date: data.date || '',
-          createdAt: data.createdAt || '',
-        },
+        tripTitle: (data.tripTitle as string) || '',
+        destination: (data.tripDestination as string) || '',
+        startDate,
+        ownerId,
+        ownerName: owner.name,
+        ownerAvatar: owner.avatar,
+        media: firestoreToMedia(mediaDoc.id, tripId, data),
       });
     }
-  }
 
-  // Sort by newest first and limit
-  posts.sort((a, b) => b.media.createdAt.localeCompare(a.media.createdAt));
-  return posts.slice(0, limitCount);
+    return posts;
+  };
+
+  return Promise.race([fetchData(), timeout]);
 }
+
+/** @deprecated use fetchPublicMedia — kept as a thin alias for any lingering callers */
+export const fetchPublicTripMedia = fetchPublicMedia;

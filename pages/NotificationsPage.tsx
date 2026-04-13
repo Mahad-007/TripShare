@@ -20,7 +20,7 @@ function getNotificationIcon(type: NotificationType) {
   switch (type) {
     case 'invitation':
     case 'invitation_accepted':
-      return { icon: Mail, color: 'text-indigo-600', bg: 'bg-indigo-50' };
+      return { icon: Mail, color: 'text-teal-600', bg: 'bg-teal-50' };
     case 'expense_added':
     case 'expense_updated':
     case 'expense_deleted':
@@ -84,14 +84,14 @@ const NotificationsPage: React.FC = () => {
           title="Mark all read"
           aria-label="Mark all as read"
         >
-          <CheckCheck size={20} className="text-indigo-600" />
+          <CheckCheck size={20} className="text-teal-600" />
         </button>
       </div>
 
       {/* Loading */}
       {loading && (
         <div className="flex-1 flex items-center justify-center">
-          <Loader size={28} className="text-indigo-600 animate-spin" />
+          <Loader size={28} className="text-teal-600 animate-spin" />
         </div>
       )}
 
@@ -118,7 +118,7 @@ const NotificationsPage: React.FC = () => {
                 key={notif.id}
                 onClick={() => handleTap(notif)}
                 className={`w-full flex items-start space-x-3 p-4 text-left hover:bg-slate-50 transition-colors ${
-                  !notif.read ? 'bg-indigo-50/40' : ''
+                  !notif.read ? 'bg-teal-50/40' : ''
                 }`}
               >
                 <div className={`${bg} ${color} p-2.5 rounded-xl flex-shrink-0 mt-0.5`}>
@@ -131,7 +131,7 @@ const NotificationsPage: React.FC = () => {
                   <p className="text-[11px] text-slate-400 font-medium mt-1">{timeAgo(notif.createdAt)}</p>
                 </div>
                 {!notif.read && (
-                  <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full flex-shrink-0 mt-2" />
+                  <div className="w-2.5 h-2.5 bg-teal-600 rounded-full flex-shrink-0 mt-2" />
                 )}
               </button>
             );

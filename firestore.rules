@@ -58,10 +58,15 @@ service cloud.firestore {
 
       // Media subcollection — granular rules
       match /media/{mediaId} {
+        // Read access: trip owner, participants, anyone when the trip itself is public,
+        // OR anyone when THIS media doc is marked public (per-media visibility). The
+        // per-media branch is what lets Explore's collectionGroup query return public
+        // photos even from a private parent trip.
         allow read: if request.auth != null
           && (get(/databases/$(database)/documents/trips/$(tripId)).data.ownerId == request.auth.uid
               || request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.participantIds
-              || get(/databases/$(database)/documents/trips/$(tripId)).data.isPublic == true);
+              || get(/databases/$(database)/documents/trips/$(tripId)).data.isPublic == true
+              || resource.data.isPublic == true);
 
         allow create: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.participantIds
@@ -103,10 +108,17 @@ service cloud.firestore {
 
       allow read: if request.auth != null
         && (resource.data.fromUserId == request.auth.uid
-            || resource.data.toUserId == request.auth.uid);
+            || resource.data.toUserId == request.auth.uid
+            || (resource.data.toEmail == request.auth.token.email
+                && resource.data.toUserId == ''
+                && resource.data.status == 'pending'));
 
       allow update: if request.auth != null
-        && resource.data.toUserId == request.auth.uid;
+        && (resource.data.toUserId == request.auth.uid
+            || (resource.data.toEmail == request.auth.token.email
+                && resource.data.toUserId == ''
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['toUserId'])
+                && request.resource.data.toUserId == request.auth.uid));
 
       allow delete: if request.auth != null
         && (resource.data.fromUserId == request.auth.uid
@@ -118,6 +130,26 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow read: if request.auth != null;
       // No update or delete — immutable
+    }
+
+    // Invite codes — short bearer tokens mapping a code to a tripId.
+    // Read: any authenticated user (lookup during join flow).
+    // Create: any authenticated user may claim a code doc they own.
+    //   NOTE: we cannot get() the trip inside a writeBatch (pre-batch state
+    //   has no trip yet), so the rule is intentionally lenient. Security is
+    //   preserved because joinByCode only ever adds the CALLER to participantIds
+    //   via the existing trip self-join rule — an attacker pointing a code at
+    //   someone else's trip cannot use it to gain access to that trip.
+    // Delete: only the original creator (trip owner at the time of creation).
+    match /inviteCodes/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.tripId is string
+        && request.resource.data.keys().hasOnly(['tripId', 'createdBy', 'createdAt']);
+      allow delete: if request.auth != null
+        && resource.data.createdBy == request.auth.uid;
+      // No update — codes are immutable once created.
     }
 
     // Default deny everything else

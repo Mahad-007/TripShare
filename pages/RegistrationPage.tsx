@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, Camera, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from '../components/Logo';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrors';
 
 const RegistrationPage: React.FC = () => {
@@ -44,14 +45,15 @@ const RegistrationPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 max-w-md mx-auto px-8 py-12">
+    <div className="flex flex-col min-h-screen bg-slate-50 w-full px-8 py-12">
       <div className="mb-10">
+        <Logo size={44} className="mb-4" />
         <h1 className="text-3xl font-extrabold text-slate-900">Create Account</h1>
         <p className="text-slate-500 mt-2 font-medium">Start sharing your adventures securely</p>
       </div>
 
       <div className="flex flex-col items-center mb-8">
-        <div className="w-24 h-24 bg-indigo-50 rounded-full border-2 border-dashed border-indigo-200 flex flex-col items-center justify-center text-indigo-400 cursor-pointer hover:bg-indigo-100 transition-colors">
+        <div className="w-24 h-24 bg-teal-50 rounded-full border-2 border-dashed border-teal-200 flex flex-col items-center justify-center text-teal-400 cursor-pointer hover:bg-teal-100 transition-colors">
           <Camera size={24} />
           <span className="text-[10px] font-bold mt-1 uppercase">Add Photo</span>
         </div>
@@ -74,7 +76,7 @@ const RegistrationPage: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ehtisham Ali"
-              className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+              className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium"
             />
           </div>
         </div>
@@ -89,7 +91,7 @@ const RegistrationPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+              className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium"
             />
           </div>
         </div>
@@ -104,20 +106,20 @@ const RegistrationPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
-              className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+              className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium"
             />
           </div>
           <p className="text-[11px] text-slate-400 ml-1">Must be 8+ chars with an uppercase letter and a number.</p>
         </div>
 
         <p className="text-[11px] text-slate-400 leading-relaxed px-1">
-          By signing up, you agree to our <span className="text-indigo-600 font-bold">Terms of Service</span> and <span className="text-indigo-600 font-bold">Privacy Policy</span>.
+          By signing up, you agree to our <span className="text-teal-600 font-bold">Terms of Service</span> and <span className="text-teal-600 font-bold">Privacy Policy</span>.
         </p>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all mt-6 disabled:opacity-50"
+          className="w-full bg-teal-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-teal-100 hover:bg-teal-700 active:scale-[0.98] transition-all mt-6 disabled:opacity-50"
         >
           {loading ? (
             <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
@@ -133,7 +135,7 @@ const RegistrationPage: React.FC = () => {
       <div className="mt-auto pt-10 text-center">
         <p className="text-slate-500 font-medium">
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-600 font-bold hover:underline">
+          <Link to="/login" className="text-teal-600 font-bold hover:underline">
             Sign In
           </Link>
         </p>

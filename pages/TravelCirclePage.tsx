@@ -107,7 +107,7 @@ const TravelCirclePage: React.FC = () => {
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-3 text-sm font-bold capitalize transition-colors ${
               activeTab === tab
-                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                ? 'text-teal-600 border-b-2 border-teal-600'
                 : 'text-slate-400'
             }`}
           >
@@ -119,7 +119,7 @@ const TravelCirclePage: React.FC = () => {
       {/* Loading */}
       {loading && (
         <div className="flex-1 flex items-center justify-center">
-          <Loader size={28} className="text-indigo-600 animate-spin" />
+          <Loader size={28} className="text-teal-600 animate-spin" />
         </div>
       )}
 
@@ -153,11 +153,11 @@ const TravelCirclePage: React.FC = () => {
             return (
               <div key={uid} className="flex items-center justify-between p-4 bg-white">
                 <div className="flex items-center space-x-3 min-w-0">
-                  <div className="w-11 h-11 rounded-full border-2 border-indigo-100 p-0.5 overflow-hidden bg-indigo-50 flex-shrink-0">
+                  <div className="w-11 h-11 rounded-full border-2 border-teal-100 p-0.5 overflow-hidden bg-teal-50 flex-shrink-0">
                     {u?.avatar ? (
                       <img src={u.avatar} alt={u.name} className="w-full h-full rounded-full object-cover" />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-bold text-sm">
+                      <div className="w-full h-full rounded-full bg-teal-100 flex items-center justify-center text-teal-500 font-bold text-sm">
                         {(u?.name || '?').charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -173,8 +173,8 @@ const TravelCirclePage: React.FC = () => {
                     disabled={isToggling}
                     className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
                       isFollowingUser
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
                     }`}
                   >
                     {isToggling ? (

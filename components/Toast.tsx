@@ -46,7 +46,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 const COLORS: Record<ToastType, string> = {
   success: 'bg-emerald-600',
   error: 'bg-rose-600',
-  info: 'bg-indigo-600',
+  info: 'bg-teal-600',
 };
 
 const ICONS: Record<ToastType, React.ReactNode> = {

@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  addDoc,
   updateDoc,
   deleteDoc,
   getDoc,
@@ -18,6 +17,7 @@ import { ref, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
 import { Trip, FirestoreTrip, TripFormData, User } from '../types';
 import { deleteCoverImage, isStorageUrl } from './storageService';
+import { prepareInviteCodeWrite } from './inviteCodeService';
 
 // Module-level user cache to avoid redundant reads
 const userCache = new Map<string, User>();
@@ -75,6 +75,7 @@ function docToTrip(id: string, data: FirestoreTrip, participants: User[]): Trip 
     coverImage: data.coverImage || '',
     status: data.status || 'draft',
     isPublic: data.isPublic ?? false,
+    inviteCode: data.inviteCode,
     createdAt: data.createdAt || '',
     updatedAt: data.updatedAt || '',
   };
@@ -82,7 +83,8 @@ function docToTrip(id: string, data: FirestoreTrip, participants: User[]): Trip 
 
 export async function createTrip(data: TripFormData, ownerId: string): Promise<string> {
   const now = new Date().toISOString();
-  const firestoreData: FirestoreTrip = {
+  const tripRef = doc(collection(db, 'trips'));
+  const baseData = {
     title: data.title,
     destination: data.destination,
     startDate: data.startDate,
@@ -91,13 +93,30 @@ export async function createTrip(data: TripFormData, ownerId: string): Promise<s
     coverImage: data.coverImage,
     ownerId,
     participantIds: [ownerId],
-    status: 'draft',
+    status: 'draft' as const,
     isPublic: data.isPublic ?? false,
     createdAt: now,
     updatedAt: now,
   };
-  const docRef = await addDoc(collection(db, 'trips'), firestoreData);
-  return docRef.id;
+
+  // Retry on astronomically-rare invite code collision
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { code, codeRef, codeData } = prepareInviteCodeWrite(tripRef.id, ownerId);
+    const firestoreData: FirestoreTrip = { ...baseData, inviteCode: code };
+    try {
+      const batch = writeBatch(db);
+      batch.set(tripRef, firestoreData);
+      batch.set(codeRef, codeData);
+      await batch.commit();
+      return tripRef.id;
+    } catch (err) {
+      lastErr = err;
+      const errCode = (err as { code?: string })?.code;
+      if (errCode !== 'already-exists') throw err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Failed to create trip after retries');
 }
 
 export async function updateTrip(tripId: string, data: Partial<FirestoreTrip>): Promise<void> {
@@ -110,11 +129,13 @@ export async function updateTrip(tripId: string, data: Partial<FirestoreTrip>): 
 export async function deleteTrip(tripId: string): Promise<void> {
   // Clean up cover image from Storage if applicable
   const tripSnap = await getDoc(doc(db, 'trips', tripId));
+  let inviteCodeToDelete: string | undefined;
   if (tripSnap.exists()) {
     const data = tripSnap.data() as FirestoreTrip;
     if (data.coverImage && isStorageUrl(data.coverImage)) {
       deleteCoverImage(data.coverImage).catch(() => {});
     }
+    inviteCodeToDelete = data.inviteCode;
   }
 
   // Cascade delete: remove all expenses in the subcollection first
@@ -159,6 +180,11 @@ export async function deleteTrip(tripId: string): Promise<void> {
     const chunk = invSnap.docs.slice(i, i + 499);
     chunk.forEach((d) => batch.delete(d.ref));
     await batch.commit();
+  }
+
+  // Clean up the invite code doc (if any)
+  if (inviteCodeToDelete) {
+    deleteDoc(doc(db, 'inviteCodes', inviteCodeToDelete)).catch(() => {});
   }
 
   await deleteDoc(doc(db, 'trips', tripId));

@@ -167,7 +167,7 @@ const AddTripPage: React.FC = () => {
               onChange={handleInputChange}
               type="text"
               placeholder="Summer Vacay 2024"
-              className={`w-full bg-slate-50 border py-3.5 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold ${errors.title ? 'border-rose-300' : 'border-slate-100'}`}
+              className={`w-full bg-slate-50 border py-3.5 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 transition-all font-semibold ${errors.title ? 'border-rose-300' : 'border-slate-100'}`}
             />
             {errors.title && <p className="text-rose-500 text-xs font-medium ml-1">{errors.title}</p>}
           </div>
@@ -175,7 +175,7 @@ const AddTripPage: React.FC = () => {
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Destination</label>
             <div className="relative">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-teal-500" size={18} />
               <input
                 required
                 name="destination"
@@ -183,7 +183,7 @@ const AddTripPage: React.FC = () => {
                 onChange={handleInputChange}
                 type="text"
                 placeholder="Where are we going?"
-                className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold ${errors.destination ? 'border-rose-300' : 'border-slate-100'}`}
+                className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 transition-all font-semibold ${errors.destination ? 'border-rose-300' : 'border-slate-100'}`}
               />
             </div>
             {errors.destination && <p className="text-rose-500 text-xs font-medium ml-1">{errors.destination}</p>}
@@ -193,14 +193,14 @@ const AddTripPage: React.FC = () => {
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Start Date</label>
               <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-teal-500" size={18} />
                 <input
                   required
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleInputChange}
                   type="date"
-                  className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold text-sm ${errors.startDate ? 'border-rose-300' : 'border-slate-100'}`}
+                  className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 transition-all font-semibold text-sm ${errors.startDate ? 'border-rose-300' : 'border-slate-100'}`}
                 />
               </div>
               {errors.startDate && <p className="text-rose-500 text-xs font-medium ml-1">{errors.startDate}</p>}
@@ -208,14 +208,14 @@ const AddTripPage: React.FC = () => {
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">End Date</label>
               <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" size={18} />
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-teal-500" size={18} />
                 <input
                   required
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleInputChange}
                   type="date"
-                  className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-semibold text-sm ${errors.endDate ? 'border-rose-300' : 'border-slate-100'}`}
+                  className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 transition-all font-semibold text-sm ${errors.endDate ? 'border-rose-300' : 'border-slate-100'}`}
                 />
               </div>
               {errors.endDate && <p className="text-rose-500 text-xs font-medium ml-1">{errors.endDate}</p>}
@@ -225,14 +225,14 @@ const AddTripPage: React.FC = () => {
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
             <div className="relative">
-              <AlignLeft className="absolute left-4 top-4 text-indigo-500" size={18} />
+              <AlignLeft className="absolute left-4 top-4 text-teal-500" size={18} />
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
                 placeholder="What's the vibe of this trip?"
-                className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-sm resize-none ${errors.description ? 'border-rose-300' : 'border-slate-100'}`}
+                className={`w-full bg-slate-50 border py-3.5 pl-11 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 transition-all font-medium text-sm resize-none ${errors.description ? 'border-rose-300' : 'border-slate-100'}`}
               />
             </div>
             {errors.description && <p className="text-rose-500 text-xs font-medium ml-1">{errors.description}</p>}
@@ -244,10 +244,10 @@ const AddTripPage: React.FC = () => {
               type="checkbox"
               checked={formData.isPublic}
               onChange={(e) => setFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
-              className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              className="w-5 h-5 rounded-lg border-slate-300 text-teal-600 focus:ring-teal-500"
             />
             <div className="flex items-center space-x-2">
-              <Globe size={16} className="text-indigo-500" />
+              <Globe size={16} className="text-teal-500" />
               <span className="text-sm font-medium text-slate-700">Make this trip public on Explore</span>
             </div>
           </label>
@@ -256,7 +256,7 @@ const AddTripPage: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-xl shadow-indigo-100 active:scale-[0.98] transition-all disabled:opacity-50"
+          className="w-full bg-teal-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-xl shadow-teal-100 active:scale-[0.98] transition-all disabled:opacity-50"
         >
           {submitting ? (
             uploadProgress !== null ? (

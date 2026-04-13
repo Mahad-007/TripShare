@@ -13,7 +13,7 @@ import AddExpenseModal from '../components/AddExpenseModal';
 import { useToast } from '../hooks/useToast';
 import { Unsubscribe } from 'firebase/firestore';
 
-const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f97316', '#14b8a6'];
+const COLORS = ['#0d9488', '#06b6d4', '#8b5cf6', '#f97316', '#ec4899'];
 
 const ExpensesPage: React.FC = () => {
   const { trips } = useTrips();
@@ -196,7 +196,7 @@ const ExpensesPage: React.FC = () => {
         <select
           value={activeTripId}
           onChange={handleTripChange}
-          className="w-full bg-white border border-slate-200 py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold text-sm text-slate-700"
+          className="w-full bg-white border border-slate-200 py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 font-semibold text-sm text-slate-700"
         >
           {trips.map(t => (
             <option key={t.id} value={t.id}>{t.title} — {t.destination}</option>
@@ -213,8 +213,8 @@ const ExpensesPage: React.FC = () => {
                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Total Group Spend</p>
                 <h3 className="text-3xl font-black text-slate-800 mt-1">Rs. {totalSpent.toLocaleString()}</h3>
               </div>
-              <div className="bg-indigo-50 p-3 rounded-2xl">
-                <ChartIcon className="text-indigo-600" size={24} />
+              <div className="bg-teal-50 p-3 rounded-2xl">
+                <ChartIcon className="text-teal-600" size={24} />
               </div>
             </div>
 
@@ -268,15 +268,15 @@ const ExpensesPage: React.FC = () => {
       )}
 
       {/* AI Insights Section */}
-      <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[32px] p-6 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-teal-600 to-cyan-700 rounded-[32px] p-6 text-white shadow-xl shadow-teal-100 relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center space-x-2 mb-3">
-            <Sparkles size={20} className="text-indigo-200" />
+            <Sparkles size={20} className="text-teal-200" />
             <h4 className="font-bold text-lg">AI Expense Analyst</h4>
           </div>
 
           {aiSummary ? (
-            <div className="text-indigo-50 text-xs leading-relaxed space-y-2">
+            <div className="text-teal-50 text-xs leading-relaxed space-y-2">
               <p className="whitespace-pre-line">{aiSummary}</p>
               <button
                 onClick={() => setAiSummary(null)}
@@ -287,13 +287,13 @@ const ExpensesPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <p className="text-indigo-100 text-sm mb-4">
+              <p className="text-teal-100 text-sm mb-4">
                 Get a smart breakdown of who owes what and spending habits.
               </p>
               <button
                 onClick={handleSummarize}
                 disabled={isSummarizing || !hasExpenses}
-                className="bg-white text-indigo-600 px-6 py-2.5 rounded-full font-bold text-xs shadow-lg hover:bg-indigo-50 disabled:opacity-50 transition-all"
+                className="bg-white text-teal-600 px-6 py-2.5 rounded-full font-bold text-xs shadow-lg hover:bg-teal-50 disabled:opacity-50 transition-all"
               >
                 {isSummarizing ? 'Analyzing...' : 'Generate Summary'}
               </button>
@@ -316,7 +316,7 @@ const ExpensesPage: React.FC = () => {
                       {participant.avatar ? (
                         <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                        <div className="w-full h-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-sm">
                           {participant.name.charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -349,7 +349,7 @@ const ExpensesPage: React.FC = () => {
               {dateFilter && (
                 <button
                   onClick={() => setDateFilter('')}
-                  className="text-indigo-600 text-[10px] font-bold uppercase"
+                  className="text-teal-600 text-[10px] font-bold uppercase"
                 >
                   Clear
                 </button>
@@ -362,7 +362,7 @@ const ExpensesPage: React.FC = () => {
               />
               <button
                 onClick={handleExportCSV}
-                className="p-2 bg-white rounded-xl border border-slate-100 text-slate-400 hover:text-indigo-600 transition-colors"
+                className="p-2 bg-white rounded-xl border border-slate-100 text-slate-400 hover:text-teal-600 transition-colors"
                 title="Export CSV"
               >
                 <Download size={16} />
@@ -377,7 +377,7 @@ const ExpensesPage: React.FC = () => {
                   className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
                   onClick={() => { if (canEditExpense(expense)) setEditingExpense(expense); }}
                 >
-                  <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl flex-shrink-0">
+                  <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 font-black text-xl flex-shrink-0">
                     {expense.description.charAt(0)}
                   </div>
                   <div className="min-w-0">
@@ -399,7 +399,7 @@ const ExpensesPage: React.FC = () => {
                     <div className="flex flex-col space-y-1">
                       <button
                         onClick={() => setEditingExpense(expense)}
-                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-teal-600 transition-colors"
                         aria-label="Edit expense"
                       >
                         <Pencil size={14} />
@@ -462,7 +462,7 @@ const ExpensesPage: React.FC = () => {
       {/* Floating Action Button */}
       <button
         onClick={() => setShowModal(true)}
-        className="fixed bottom-24 right-6 w-16 h-16 bg-indigo-600 text-white rounded-full shadow-2xl shadow-indigo-300 flex items-center justify-center active:scale-90 transition-all z-40"
+        className="fixed bottom-24 right-6 w-16 h-16 bg-teal-600 text-white rounded-full shadow-2xl shadow-teal-300 flex items-center justify-center active:scale-90 transition-all z-40"
         aria-label="Add expense"
       >
         <Plus size={32} strokeWidth={3} />

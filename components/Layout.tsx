@@ -3,8 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Home, Compass, Receipt, Image, User, PlusCircle, Bell } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from './Logo';
 import { subscribeToUnreadCount } from '../services/notificationService';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useBackButton } from '../hooks/useBackButton';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -20,6 +22,7 @@ const Layout: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const unsubRef = useRef<(() => void) | null>(null);
   const isOnline = useOnlineStatus();
+  useBackButton();
 
   useEffect(() => {
     if (!user) return;
@@ -28,10 +31,10 @@ const Layout: React.FC = () => {
   }, [user]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 max-w-md mx-auto relative shadow-2xl overflow-hidden border-x border-slate-200">
+    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 w-full relative overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-indigo-600 tracking-tight">TripShare</h1>
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 pt-2 pb-4 flex justify-between items-center safe-top">
+        <Logo size={30} showText />
         <div className="flex items-center space-x-2">
           <button
             onClick={() => navigate('/notifications')}
@@ -47,7 +50,7 @@ const Layout: React.FC = () => {
           </button>
           <button
             onClick={() => navigate('/add-trip')}
-            className="bg-indigo-600 p-2 rounded-full text-white shadow-lg shadow-indigo-200 active:scale-90 transition-transform"
+            className="bg-teal-600 p-2 rounded-full text-white shadow-lg shadow-teal-200 active:scale-90 transition-transform"
             aria-label="Create new trip"
           >
             <PlusCircle size={20} />
@@ -63,12 +66,12 @@ const Layout: React.FC = () => {
       )}
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+      <main className="flex-1 overflow-y-auto pb-28 no-scrollbar">
         <Outlet />
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 px-4 py-3 flex justify-between items-center z-50">
+      <nav className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-slate-200 px-4 pt-3 pb-2 flex justify-between items-center z-50 safe-bottom">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -76,7 +79,7 @@ const Layout: React.FC = () => {
             end={item.path === '/'}
             className={({ isActive }) =>
               `flex flex-col items-center space-y-1 transition-all duration-300 ${
-                isActive ? 'text-indigo-600 scale-110' : 'text-slate-400'
+                isActive ? 'text-teal-600 scale-110' : 'text-slate-400'
               }`
             }
           >

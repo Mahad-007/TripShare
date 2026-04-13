@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Heart, Share2, ShieldCheck, MapPin, Image as ImageIcon, Loader, UserPlus, UserMinus } from 'lucide-react';
-import { fetchPublicTripMedia, ExplorePost } from '../services/mediaService';
+import { fetchPublicMedia, ExplorePost } from '../services/mediaService';
 import { toggleLike, fetchLikeStates, followUser, unfollowUser, fetchFollowStates } from '../services/socialService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,7 +22,7 @@ const ExplorePage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchPublicTripMedia(15)
+    fetchPublicMedia(15)
       .then((data) => { if (!cancelled) setPosts(data); })
       .catch(() => { if (!cancelled) setError('Could not load explore feed.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -151,7 +151,7 @@ const ExplorePage: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search trips, places, creators..."
-            className="w-full bg-white border border-slate-200 py-3.5 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+            className="w-full bg-white border border-slate-200 py-3.5 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-sm font-medium"
           />
         </div>
 
@@ -163,7 +163,7 @@ const ExplorePage: React.FC = () => {
               onClick={() => setActiveFilter(f)}
               className={`px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                 activeFilter === f
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-100'
                   : 'bg-white text-slate-500 border border-slate-200'
               }`}
             >
@@ -244,11 +244,11 @@ const ExplorePage: React.FC = () => {
 
                 return (
                   <div key={creator.ownerId} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col items-center space-y-3">
-                    <div className="w-14 h-14 rounded-full border-2 border-indigo-100 p-0.5 overflow-hidden bg-indigo-50">
+                    <div className="w-14 h-14 rounded-full border-2 border-teal-100 p-0.5 overflow-hidden bg-teal-50">
                       {creator.ownerAvatar ? (
                         <img src={creator.ownerAvatar} alt={creator.ownerName} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-bold text-lg">
+                        <div className="w-full h-full rounded-full bg-teal-100 flex items-center justify-center text-teal-500 font-bold text-lg">
                           {creator.ownerName.charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -263,8 +263,8 @@ const ExplorePage: React.FC = () => {
                         disabled={isToggling}
                         className={`w-full flex items-center justify-center space-x-1.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
                           isFollowingCreator
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
                         }`}
                       >
                         {isToggling ? (
@@ -305,11 +305,11 @@ const ExplorePage: React.FC = () => {
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full border-2 border-indigo-100 p-0.5 overflow-hidden bg-indigo-50">
+                    <div className="w-10 h-10 rounded-full border-2 border-teal-100 p-0.5 overflow-hidden bg-teal-50">
                       {post.ownerAvatar ? (
                         <img src={post.ownerAvatar} alt={post.ownerName} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-bold text-sm">
+                        <div className="w-full h-full rounded-full bg-teal-100 flex items-center justify-center text-teal-500 font-bold text-sm">
                           {post.ownerName.charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -317,7 +317,7 @@ const ExplorePage: React.FC = () => {
                     <div>
                       <div className="flex items-center space-x-1">
                         <span className="font-bold text-slate-800 text-sm">{post.ownerName}</span>
-                        {post.media.isVerified && <ShieldCheck size={14} className="text-indigo-600" />}
+                        {post.media.isVerified && <ShieldCheck size={14} className="text-teal-600" />}
                       </div>
                       <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-tight">
                         <MapPin size={10} className="mr-0.5" />
@@ -331,8 +331,8 @@ const ExplorePage: React.FC = () => {
                       disabled={isFollowToggling}
                       className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 ${
                         isFollowingOwner
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                          ? 'bg-teal-600 text-white'
+                          : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
                       }`}
                     >
                       {isFollowToggling ? '...' : isFollowingOwner ? 'Following' : 'Connect'}
@@ -349,8 +349,8 @@ const ExplorePage: React.FC = () => {
                   )}
                   {post.media.isVerified && (
                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-lg">
-                      <ShieldCheck size={14} className="text-indigo-600" />
-                      <span className="text-[10px] font-extrabold text-indigo-900 uppercase tracking-tighter">On-Chain Verified</span>
+                      <ShieldCheck size={14} className="text-teal-600" />
+                      <span className="text-[10px] font-extrabold text-teal-900 uppercase tracking-tighter">On-Chain Verified</span>
                     </div>
                   )}
                 </div>
@@ -373,7 +373,7 @@ const ExplorePage: React.FC = () => {
                       )}
                     </button>
                     <button onClick={() => handleShare(post)} className="group">
-                      <Share2 size={20} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                      <Share2 size={20} className="text-slate-400 group-hover:text-teal-600 transition-colors" />
                     </button>
                   </div>
                   <p className="text-sm text-slate-600 leading-relaxed">

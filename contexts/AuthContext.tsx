@@ -10,6 +10,7 @@ import {
   onAuthChange,
   updateUserProfile,
 } from '../services/authService';
+import { linkPendingInvitations } from '../services/invitationService';
 import { auth } from '../services/firebase';
 
 interface AuthContextType {
@@ -26,6 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const linkedInvitationsFor = { uid: '' }; // track per-session to avoid repeated queries
 
 function mapFirebaseUser(fbUser: FirebaseUser): User {
   return {
@@ -42,7 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleLogout = useCallback(async () => {
-    await logoutService();
+    try {
+      await logoutService();
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
     setUser(null);
   }, []);
 
@@ -71,8 +77,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Auth state listener
   useEffect(() => {
-    const unsubscribe = onAuthChange((fbUser) => {
-      setUser(fbUser ? mapFirebaseUser(fbUser) : null);
+    const unsubscribe = onAuthChange(async (fbUser) => {
+      if (fbUser) {
+        setUser(mapFirebaseUser(fbUser));
+
+        // Link pending invitations once per user session
+        if (fbUser.email && linkedInvitationsFor.uid !== fbUser.uid) {
+          linkedInvitationsFor.uid = fbUser.uid;
+          try {
+            await linkPendingInvitations(fbUser.uid, fbUser.email);
+          } catch (err) {
+            console.error('Failed to link pending invitations:', err);
+          }
+        }
+      } else {
+        setUser(null);
+        linkedInvitationsFor.uid = '';
+      }
       setLoading(false);
     });
     return unsubscribe;

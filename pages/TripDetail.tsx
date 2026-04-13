@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Sparkles, MapPin, Calendar, CheckCircle2, Pencil, Trash2, UserPlus, X, Users, Download } from 'lucide-react';
+import { ChevronLeft, Sparkles, MapPin, Calendar, CheckCircle2, Pencil, Trash2, UserPlus, X, Users, Download, Copy, Share2, Ticket, Mail } from 'lucide-react';
 import { getSmartItinerary } from '../services/geminiService';
 import { useTrips } from '../contexts/TripContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserRole, removeParticipant } from '../services/tripService';
 import { sendInvitation } from '../services/invitationService';
+import { ensureInviteCode } from '../services/inviteCodeService';
 import { subscribeToExpenses } from '../services/expenseService';
 import { generateTripReportPDF } from '../services/reportService';
 import { Trip, Expense } from '../types';
@@ -29,10 +30,14 @@ const TripDetail: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Participant management
+  const [inviteMode, setInviteMode] = useState<'email' | 'code'>('email');
   const [participantEmail, setParticipantEmail] = useState('');
   const [participantError, setParticipantError] = useState('');
   const [participantSuccess, setParticipantSuccess] = useState('');
+  const [participantWarning, setParticipantWarning] = useState('');
   const [addingParticipant, setAddingParticipant] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [codeError, setCodeError] = useState('');
 
   useEffect(() => {
     if (!tripId) return;
@@ -86,7 +91,7 @@ const TripDetail: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <p className="text-slate-500 font-medium">Trip not found</p>
-        <button onClick={() => navigate('/')} className="text-indigo-600 font-bold hover:underline">Go back home</button>
+        <button onClick={() => navigate('/')} className="text-teal-600 font-bold hover:underline">Go back home</button>
       </div>
     );
   }
@@ -125,10 +130,15 @@ const TripDetail: React.FC = () => {
     setAddingParticipant(true);
     setParticipantError('');
     setParticipantSuccess('');
+    setParticipantWarning('');
     try {
-      const result = await sendInvitation(trip.id, trip.title, user.id, user.name, participantEmail.trim());
+      const result = await sendInvitation(trip.id, trip.title, user.id, user.name, participantEmail.trim(), trip.destination);
       if (result.success) {
-        setParticipantSuccess('Invitation sent!');
+        if (result.emailSent) {
+          setParticipantSuccess('Invitation sent — email delivered.');
+        } else {
+          setParticipantWarning("Invitation saved, but the email couldn't be delivered. Share the invite code below instead.");
+        }
         setParticipantEmail('');
       } else {
         setParticipantError(result.error || 'Failed to send invitation.');
@@ -138,6 +148,54 @@ const TripDetail: React.FC = () => {
       showToast('Failed to send invitation', 'error');
     } finally {
       setAddingParticipant(false);
+    }
+  };
+
+  const handleSwitchInviteMode = async (mode: 'email' | 'code') => {
+    setInviteMode(mode);
+    setParticipantError('');
+    setParticipantSuccess('');
+    setParticipantWarning('');
+    setCodeError('');
+    if (mode === 'code' && trip && user && !trip.inviteCode && isOwner) {
+      setGeneratingCode(true);
+      try {
+        await ensureInviteCode(trip.id, user.id);
+      } catch (err) {
+        setCodeError(err instanceof Error ? err.message : 'Failed to generate invite code.');
+      } finally {
+        setGeneratingCode(false);
+      }
+    }
+  };
+
+  const handleCopyCode = async () => {
+    if (!trip?.inviteCode) return;
+    try {
+      await navigator.clipboard.writeText(trip.inviteCode);
+      showToast('Code copied to clipboard', 'success');
+    } catch {
+      showToast('Failed to copy code', 'error');
+    }
+  };
+
+  const handleShareCode = async () => {
+    if (!trip?.inviteCode) return;
+    const url = `${window.location.origin}/?join=${encodeURIComponent(trip.inviteCode)}`;
+    const shareText = `Join my trip "${trip.title}" on TripShare. Use invite code ${trip.inviteCode} or tap: ${url}`;
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: `Join "${trip.title}"`, text: shareText, url });
+        return;
+      } catch {
+        // user cancelled or share unsupported — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareText);
+      showToast('Share text copied to clipboard', 'success');
+    } catch {
+      showToast('Unable to share', 'error');
     }
   };
 
@@ -229,7 +287,7 @@ const TripDetail: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
             <div className="flex items-center text-sm font-medium text-slate-600">
-              <Calendar size={16} className="mr-2 text-indigo-500" />
+              <Calendar size={16} className="mr-2 text-teal-500" />
               {durationDays} {durationDays === 1 ? 'Day' : 'Days'}
             </div>
             <div className="flex items-center text-sm font-medium text-slate-600">
@@ -243,7 +301,7 @@ const TripDetail: React.FC = () => {
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-bold text-slate-800 flex items-center">
-              <Users size={18} className="mr-2 text-indigo-600" />
+              <Users size={18} className="mr-2 text-teal-600" />
               Participants ({trip.participants.length})
             </h4>
           </div>
@@ -256,7 +314,7 @@ const TripDetail: React.FC = () => {
                     {p.avatar ? (
                       <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                      <div className="w-full h-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold">
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -264,7 +322,7 @@ const TripDetail: React.FC = () => {
                   <div>
                     <p className="font-bold text-slate-800 text-sm">
                       {p.name}
-                      {p.id === trip.ownerId && <span className="ml-2 text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold uppercase">Owner</span>}
+                      {p.id === trip.ownerId && <span className="ml-2 text-[10px] bg-teal-100 text-teal-600 px-2 py-0.5 rounded-full font-bold uppercase">Owner</span>}
                     </p>
                     <p className="text-slate-400 text-xs">{p.email}</p>
                   </div>
@@ -283,46 +341,129 @@ const TripDetail: React.FC = () => {
 
           {/* Add participant (owner only) */}
           {isOwner && (
-            <form onSubmit={handleAddParticipant} className="pt-3 border-t border-slate-50">
+            <div className="pt-3 border-t border-slate-50 space-y-3">
+              {/* Invite method selector */}
               <div className="flex space-x-2">
-                <div className="relative flex-1">
-                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="email"
-                    value={participantEmail}
-                    onChange={(e) => { setParticipantEmail(e.target.value); setParticipantError(''); setParticipantSuccess(''); }}
-                    placeholder="Add by email..."
-                    className="w-full bg-slate-50 border border-slate-100 py-2.5 pl-10 pr-4 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-medium"
-                  />
-                </div>
                 <button
-                  type="submit"
-                  disabled={addingParticipant || !participantEmail.trim()}
-                  className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50"
+                  type="button"
+                  onClick={() => handleSwitchInviteMode('email')}
+                  className={`flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
+                    inviteMode === 'email'
+                      ? 'bg-teal-600 text-white shadow-md shadow-teal-100'
+                      : 'bg-slate-50 text-slate-500 border border-slate-100'
+                  }`}
                 >
-                  {addingParticipant ? '...' : 'Invite'}
+                  <Mail size={14} />
+                  <span>By Email</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchInviteMode('code')}
+                  className={`flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
+                    inviteMode === 'code'
+                      ? 'bg-teal-600 text-white shadow-md shadow-teal-100'
+                      : 'bg-slate-50 text-slate-500 border border-slate-100'
+                  }`}
+                >
+                  <Ticket size={14} />
+                  <span>By Code</span>
                 </button>
               </div>
-              {participantError && <p className="text-rose-500 text-xs font-medium mt-2">{participantError}</p>}
-              {participantSuccess && <p className="text-emerald-500 text-xs font-medium mt-2">{participantSuccess}</p>}
-            </form>
+
+              {inviteMode === 'email' ? (
+                <form onSubmit={handleAddParticipant}>
+                  <div className="flex space-x-2">
+                    <div className="relative flex-1">
+                      <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="email"
+                        value={participantEmail}
+                        onChange={(e) => {
+                          setParticipantEmail(e.target.value);
+                          setParticipantError('');
+                          setParticipantSuccess('');
+                          setParticipantWarning('');
+                        }}
+                        placeholder="Add by email..."
+                        className="w-full bg-slate-50 border border-slate-100 py-2.5 pl-10 pr-4 rounded-xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 text-sm font-medium"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={addingParticipant || !participantEmail.trim()}
+                      className="bg-teal-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50"
+                    >
+                      {addingParticipant ? '...' : 'Invite'}
+                    </button>
+                  </div>
+                  {participantError && <p className="text-rose-500 text-xs font-medium mt-2">{participantError}</p>}
+                  {participantSuccess && <p className="text-emerald-500 text-xs font-medium mt-2">{participantSuccess}</p>}
+                  {participantWarning && <p className="text-amber-600 text-xs font-medium mt-2">{participantWarning}</p>}
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  {codeError && (
+                    <p className="text-rose-500 text-xs font-medium">{codeError}</p>
+                  )}
+                  {generatingCode && !trip.inviteCode ? (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-5 text-center text-xs font-medium text-slate-500">
+                      Generating invite code…
+                    </div>
+                  ) : trip.inviteCode ? (
+                    <>
+                      <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-100 rounded-2xl p-4">
+                        <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-1.5">Invite Code</p>
+                        <p className="font-mono font-bold text-2xl text-slate-800 tracking-[0.3em] select-all">
+                          {trip.inviteCode}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={handleCopyCode}
+                          className="flex-1 flex items-center justify-center space-x-1.5 bg-slate-50 border border-slate-100 text-slate-600 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-100 transition-colors"
+                        >
+                          <Copy size={14} />
+                          <span>Copy</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleShareCode}
+                          className="flex-1 flex items-center justify-center space-x-1.5 bg-teal-600 text-white py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-teal-700 transition-colors"
+                        >
+                          <Share2 size={14} />
+                          <span>Share</span>
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        Anyone with this code can join this trip. Keep it safe.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-5 text-center text-xs font-medium text-slate-500">
+                      No invite code yet. Tap retry to generate one.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
         {/* Gemini AI Assistant */}
-        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-teal-600 to-cyan-700 rounded-3xl p-6 text-white shadow-xl shadow-teal-100 relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex items-center space-x-2 mb-3">
-              <Sparkles size={20} className="text-indigo-200" />
+              <Sparkles size={20} className="text-teal-200" />
               <h4 className="font-bold text-lg">AI Trip Assistant</h4>
             </div>
-            <p className="text-indigo-100 text-sm mb-4 leading-relaxed">
+            <p className="text-teal-100 text-sm mb-4 leading-relaxed">
               Let Gemini help you plan the perfect itinerary for {trip.destination}.
             </p>
             {!itinerary && !isLoading && (
               <button
                 onClick={generateItinerary}
-                className="bg-white text-indigo-600 px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-indigo-50 transition-colors"
+                className="bg-white text-teal-600 px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-teal-50 transition-colors"
               >
                 Generate Itinerary
               </button>
@@ -343,7 +484,7 @@ const TripDetail: React.FC = () => {
         {itinerary && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-              <MapPin size={20} className="mr-2 text-indigo-600" />
+              <MapPin size={20} className="mr-2 text-teal-600" />
               Suggested Itinerary
             </h4>
             <div className="whitespace-pre-line text-slate-600 text-sm leading-relaxed">
@@ -351,7 +492,7 @@ const TripDetail: React.FC = () => {
             </div>
             <button
               onClick={() => setItinerary(null)}
-              className="mt-6 text-slate-400 text-sm hover:text-indigo-600 transition-colors"
+              className="mt-6 text-slate-400 text-sm hover:text-teal-600 transition-colors"
             >
               Clear and start over
             </button>

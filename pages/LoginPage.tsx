@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ChevronRight, Globe } from 'lucide-react';
+import { Mail, Lock, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from '../components/Logo';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrors';
 
 const LoginPage: React.FC = () => {
@@ -43,18 +44,18 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 max-w-md mx-auto relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-slate-50 w-full relative overflow-hidden">
       {/* Background Orbs */}
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-violet-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-teal-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-cyan-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
 
       <div className="flex-1 flex flex-col justify-center px-8 relative z-10">
         <div className="mb-10 text-center">
-          <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-100 rotate-3">
-            <Globe className="text-white" size={40} />
+          <div className="mx-auto mb-5">
+            <Logo size={72} className="justify-center" />
           </div>
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">TripShare</h1>
-          <p className="text-slate-500 mt-3 font-medium">Join the circle of verified travelers</p>
+          <p className="text-slate-500 mt-3 font-medium">Plan together. Travel smarter.</p>
         </div>
 
         {error && (
@@ -74,7 +75,7 @@ const LoginPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium"
               />
             </div>
           </div>
@@ -89,19 +90,19 @@ const LoginPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                className="w-full bg-white border border-slate-200 py-4 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all font-medium"
               />
             </div>
           </div>
 
-          <Link to="/forgot-password" className="text-indigo-600 text-sm font-bold block ml-auto hover:underline text-right">
+          <Link to="/forgot-password" className="text-teal-600 text-sm font-bold block ml-auto hover:underline text-right">
             Forgot Password?
           </Link>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all mt-6 disabled:opacity-50"
+            className="w-full bg-teal-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-teal-100 hover:bg-teal-700 active:scale-[0.98] transition-all mt-6 disabled:opacity-50"
           >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
@@ -139,7 +140,7 @@ const LoginPage: React.FC = () => {
         <div className="mt-12 text-center">
           <p className="text-slate-500 font-medium">
             New to TripShare?{' '}
-            <Link to="/register" className="text-indigo-600 font-bold hover:underline">
+            <Link to="/register" className="text-teal-600 font-bold hover:underline">
               Create an Account
             </Link>
           </p>

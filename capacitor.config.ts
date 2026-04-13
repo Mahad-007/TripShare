@@ -4,6 +4,14 @@ const config: CapacitorConfig = {
   appId: 'com.tripshare.app',
   appName: 'TripShare',
   webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+    allowNavigation: [
+      'firebasestorage.googleapis.com',
+      '*.firebasestorage.app',
+      '*.googleapis.com',
+    ],
+  },
   plugins: {
     GoogleAuth: {
       scopes: ['profile', 'email'],

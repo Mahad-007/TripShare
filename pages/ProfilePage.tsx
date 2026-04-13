@@ -69,8 +69,12 @@ const ProfilePage: React.FC = () => {
   const completedCount = trips.filter((t) => t.status === 'completed').length;
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Logout failed:', err);
+      showToast('Logout failed. Please try again.', 'error');
+    }
   };
 
   const handleAvatarClick = () => {
@@ -119,7 +123,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const menuItems = [
-    { icon: Bell, label: 'Notifications', color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => navigate('/notifications') },
+    { icon: Bell, label: 'Notifications', color: 'text-teal-600', bg: 'bg-teal-50', action: () => navigate('/notifications') },
     { icon: Shield, label: 'Trust & Safety', color: 'text-emerald-600', bg: 'bg-emerald-50', action: () => navigate('/settings') },
     { icon: Users, label: 'Travel Circle', color: 'text-violet-600', bg: 'bg-violet-50', action: () => navigate('/travel-circle') },
     { icon: HelpCircle, label: 'Get Help', color: 'text-amber-600', bg: 'bg-amber-50', disabled: true },
@@ -139,15 +143,15 @@ const ProfilePage: React.FC = () => {
       {/* Profile Card */}
       <div className="flex flex-col items-center text-center space-y-4">
         <div className="relative">
-          <div className="w-28 h-28 rounded-full border-4 border-white shadow-xl overflow-hidden ring-4 ring-indigo-50">
+          <div className="w-28 h-28 rounded-full border-4 border-white shadow-xl overflow-hidden ring-4 ring-teal-50">
             {uploadingAvatar ? (
-              <div className="w-full h-full bg-indigo-50 flex items-center justify-center">
-                <Loader size={28} className="text-indigo-600 animate-spin" />
+              <div className="w-full h-full bg-teal-50 flex items-center justify-center">
+                <Loader size={28} className="text-teal-600 animate-spin" />
               </div>
             ) : user.avatar ? (
               <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-3xl font-bold">
+              <div className="w-full h-full bg-teal-100 flex items-center justify-center text-teal-600 text-3xl font-bold">
                 {user.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -155,7 +159,7 @@ const ProfilePage: React.FC = () => {
           <button
             onClick={handleAvatarClick}
             disabled={uploadingAvatar}
-            className="absolute bottom-1 right-1 bg-indigo-600 text-white p-2 rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="absolute bottom-1 right-1 bg-teal-600 text-white p-2 rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-teal-700 transition-colors disabled:opacity-50"
             aria-label="Change profile photo"
           >
             <Camera size={14} />
@@ -176,14 +180,14 @@ const ProfilePage: React.FC = () => {
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="bg-white border border-slate-200 py-2 px-3 rounded-xl text-center font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="bg-white border border-slate-200 py-2 px-3 rounded-xl text-center font-bold text-slate-800 outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
               />
               <button
                 onClick={handleSaveName}
                 disabled={savingName || !newName.trim()}
-                className="bg-indigo-600 text-white px-3 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
+                className="bg-teal-600 text-white px-3 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
               >
                 {savingName ? '...' : 'Save'}
               </button>
@@ -197,7 +201,7 @@ const ProfilePage: React.FC = () => {
             </div>
           ) : (
             <h2
-              className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-indigo-600 transition-colors"
+              className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-teal-600 transition-colors"
               onClick={handleStartEditName}
               title="Click to edit name"
             >
@@ -212,7 +216,7 @@ const ProfilePage: React.FC = () => {
       <div className="grid grid-cols-4 gap-3">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white p-3 rounded-2xl border border-slate-100 flex flex-col items-center justify-center space-y-1 shadow-sm">
-            <stat.icon size={18} className="text-indigo-600 mb-1" />
+            <stat.icon size={18} className="text-teal-600 mb-1" />
             <span className="text-lg font-bold text-slate-800">{stat.count}</span>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{stat.label}</span>
           </div>

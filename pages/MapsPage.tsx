@@ -259,9 +259,9 @@ const MapsPage: React.FC = () => {
                         stops: [[0, 0], [20, accuracy! / 0.075]],
                         base: 2,
                       },
-                      'circle-color': '#3b82f6',
+                      'circle-color': '#0d9488',
                       'circle-opacity': 0.08,
-                      'circle-stroke-color': '#3b82f6',
+                      'circle-stroke-color': '#0d9488',
                       'circle-stroke-opacity': 0.25,
                       'circle-stroke-width': 1,
                     }}
@@ -281,10 +281,10 @@ const MapsPage: React.FC = () => {
                 onClick={(e) => { e.originalEvent.stopPropagation(); setShowDestPopup(true); }}
               >
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                  <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                     <MapPin size={16} className="text-white" />
                   </div>
-                  <div className="w-2 h-2 bg-indigo-600 rotate-45 -mt-1" />
+                  <div className="w-2 h-2 bg-teal-600 rotate-45 -mt-1" />
                 </div>
               </Marker>
               {showDestPopup && (
@@ -349,7 +349,7 @@ const MapsPage: React.FC = () => {
                 )}
                 <button
                   onClick={() => handleGetDirections(popupPlace.location)}
-                  className="text-xs text-indigo-600 font-semibold hover:underline mt-1"
+                  className="text-xs text-teal-600 font-semibold hover:underline mt-1"
                 >
                   Get Directions
                 </button>
@@ -364,7 +364,7 @@ const MapsPage: React.FC = () => {
                 id="route-line"
                 type="line"
                 paint={{
-                  'line-color': '#4f46e5',
+                  'line-color': '#0f766e',
                   'line-width': 5,
                   'line-opacity': 0.8,
                 }}
@@ -412,7 +412,7 @@ const MapsPage: React.FC = () => {
             <button
               onClick={() => handleGetDirections()}
               disabled={directionsLoading}
-              className="bg-indigo-600 text-white p-2.5 rounded-xl flex-shrink-0 disabled:opacity-50"
+              className="bg-teal-600 text-white p-2.5 rounded-xl flex-shrink-0 disabled:opacity-50"
               title="Get Directions"
             >
               {directionsLoading ? (
@@ -481,7 +481,7 @@ const MapsPage: React.FC = () => {
         {/* Geocoding loading indicator */}
         {geocodingLoading && (
           <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg flex items-center gap-3 border border-slate-100">
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-200 border-t-indigo-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-teal-200 border-t-teal-600"></div>
             <p className="text-xs text-slate-600 font-medium">Finding {destination}...</p>
           </div>
         )}
@@ -518,7 +518,7 @@ const MapsPage: React.FC = () => {
           {nearbyPlaces.length > 2 && (
             <button
               onClick={() => setBottomSheetExpanded(!bottomSheetExpanded)}
-              className="text-indigo-600 text-xs font-semibold flex items-center gap-1"
+              className="text-teal-600 text-xs font-semibold flex items-center gap-1"
             >
               {bottomSheetExpanded ? (
                 <>Show Less <ChevronUp size={14} /></>
@@ -575,7 +575,7 @@ const MapsPage: React.FC = () => {
                     handleGetDirections(place.location);
                   }}
                   disabled={directionsLoading}
-                  className="bg-indigo-50 px-3 py-1.5 rounded-full text-[10px] font-bold text-indigo-600 uppercase flex-shrink-0 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                  className="bg-teal-50 px-3 py-1.5 rounded-full text-[10px] font-bold text-teal-600 uppercase flex-shrink-0 hover:bg-teal-100 transition-colors disabled:opacity-50"
                 >
                   Directions
                 </button>

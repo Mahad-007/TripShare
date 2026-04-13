@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Calendar, AlignLeft, Upload, Loader } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Calendar, AlignLeft, Upload, Loader, Lock, Globe } from 'lucide-react';
 import { uploadMedia, validateFile } from '../services/mediaService';
 
 interface UploadMediaModalProps {
@@ -8,6 +8,9 @@ interface UploadMediaModalProps {
   onClose: () => void;
   participantIds?: string[];
   tripTitle?: string;
+  tripDestination?: string;
+  tripOwnerId?: string;
+  tripIsPublic?: boolean;
 }
 
 const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
@@ -16,15 +19,22 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
   onClose,
   participantIds,
   tripTitle,
+  tripDestination,
+  tripOwnerId,
+  tripIsPublic,
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  // Default the visibility to the trip's own setting so the user's prior choice
+  // carries through. Owner can override per-photo.
+  const [isPublic, setIsPublic] = useState<boolean>(tripIsPublic ?? false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -63,11 +73,15 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
     try {
       await uploadMedia(
         tripId,
-        { file, caption, date },
+        { file, caption, date, isPublic },
         currentUserId,
         setUploadProgress,
-        participantIds,
-        tripTitle
+        {
+          title: tripTitle,
+          destination: tripDestination,
+          ownerId: tripOwnerId,
+          participantIds,
+        }
       );
       onClose();
     } catch (err: any) {
@@ -77,11 +91,12 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
     }
   };
 
-  const isVideo = file?.type.startsWith('video/');
+  const fileExt = file?.name.split('.').pop()?.toLowerCase() || '';
+  const isVideo = file?.type.startsWith('video/') || ['mp4', 'mov', 'webm'].includes(fileExt);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="bg-white rounded-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-800">Upload Media</h3>
@@ -97,19 +112,32 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* File Selection / Preview */}
           {!file ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center space-y-3 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all"
-            >
-              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center">
-                <Camera size={28} className="text-indigo-500" />
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-slate-700 text-center">Add Photo or Video</p>
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center space-y-2 hover:border-teal-300 hover:bg-teal-50/50 transition-all"
+                >
+                  <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center">
+                    <Camera size={24} className="text-teal-500" />
+                  </div>
+                  <p className="font-bold text-slate-700 text-xs">Camera</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center space-y-2 hover:border-teal-300 hover:bg-teal-50/50 transition-all"
+                >
+                  <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center">
+                    <ImageIcon size={24} className="text-teal-500" />
+                  </div>
+                  <p className="font-bold text-slate-700 text-xs">Gallery</p>
+                </button>
               </div>
-              <div className="text-center">
-                <p className="font-bold text-slate-700 text-sm">Tap to capture or select</p>
-                <p className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP, MP4, MOV, WebM (max 10MB)</p>
-              </div>
-            </button>
+              <p className="text-xs text-slate-400 text-center">JPEG, PNG, WebP, MP4, MOV, WebM (max 10MB)</p>
+            </div>
           ) : (
             <div className="space-y-2">
               <div className="relative rounded-2xl overflow-hidden bg-slate-100">
@@ -137,10 +165,11 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
                     if (preview) URL.revokeObjectURL(preview);
                     setFile(null);
                     setPreview(null);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    if (cameraInputRef.current) cameraInputRef.current.value = '';
+                    if (galleryInputRef.current) galleryInputRef.current.value = '';
                   }}
                   disabled={uploading}
-                  className="text-xs text-indigo-600 font-bold hover:text-indigo-800"
+                  className="text-xs text-teal-600 font-bold hover:text-teal-800"
                 >
                   Change
                 </button>
@@ -149,10 +178,17 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
           )}
 
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*,video/*"
             capture="environment"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*,video/*"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -166,7 +202,7 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
               value={caption}
               onChange={(e) => setCaption(e.target.value.slice(0, 200))}
               disabled={uploading}
-              className="w-full bg-slate-50 border border-slate-100 py-3.5 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-medium transition-all"
+              className="w-full bg-slate-50 border border-slate-100 py-3.5 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 text-sm font-medium transition-all"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-300">
               {caption.length}/200
@@ -181,8 +217,46 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
               value={date}
               onChange={(e) => setDate(e.target.value)}
               disabled={uploading}
-              className="w-full bg-slate-50 border border-slate-100 py-3.5 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-medium transition-all"
+              className="w-full bg-slate-50 border border-slate-100 py-3.5 pl-12 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 text-sm font-medium transition-all"
             />
+          </div>
+
+          {/* Visibility Toggle */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Visibility</p>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => setIsPublic(false)}
+                disabled={uploading}
+                className={`flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                  !isPublic
+                    ? 'bg-teal-600 text-white shadow-md shadow-teal-100'
+                    : 'bg-slate-50 text-slate-500 border border-slate-100'
+                }`}
+              >
+                <Lock size={14} />
+                <span>Private</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPublic(true)}
+                disabled={uploading}
+                className={`flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                  isPublic
+                    ? 'bg-teal-600 text-white shadow-md shadow-teal-100'
+                    : 'bg-slate-50 text-slate-500 border border-slate-100'
+                }`}
+              >
+                <Globe size={14} />
+                <span>Public</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed ml-1">
+              {isPublic
+                ? 'This photo will appear in the public Explore feed once it\'s verified.'
+                : 'Only trip members can see this photo.'}
+            </p>
           </div>
 
           {/* Progress Bar */}
@@ -190,7 +264,7 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
             <div className="space-y-1.5">
               <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                 <div
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                  className="bg-teal-600 h-full rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
@@ -211,7 +285,7 @@ const UploadMediaModal: React.FC<UploadMediaModalProps> = ({
           <button
             type="submit"
             disabled={!file || uploading}
-            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            className="w-full bg-teal-600 text-white py-3.5 rounded-2xl font-bold text-sm hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
             {uploading ? (
               <>

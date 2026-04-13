@@ -50,6 +50,12 @@ export interface Media {
   uploadedBy: string;
   blockchainHash?: string;
   isVerified: boolean;
+  isPublic: boolean;
+  // Denormalized trip fields — allow Explore (collectionGroup) to render
+  // a public photo from a private trip without reading the parent trip doc.
+  tripTitle?: string;
+  tripDestination?: string;
+  tripOwnerId?: string;
   date: string;
   createdAt: string;
 }
@@ -64,6 +70,10 @@ export interface FirestoreMedia {
   uploadedBy: string;
   blockchainHash?: string;
   isVerified: boolean;
+  isPublic: boolean;
+  tripTitle?: string;
+  tripDestination?: string;
+  tripOwnerId?: string;
   date: string;
   createdAt: string;
 }
@@ -73,6 +83,7 @@ export interface MediaFormData {
   file: File;
   caption: string;
   date: string;
+  isPublic: boolean;
 }
 
 export interface Trip {
@@ -88,6 +99,7 @@ export interface Trip {
   coverImage: string;
   status: 'draft' | 'active' | 'completed' | 'archived';
   isPublic: boolean;
+  inviteCode?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -104,6 +116,7 @@ export interface FirestoreTrip {
   coverImage: string;
   status: 'draft' | 'active' | 'completed' | 'archived';
   isPublic: boolean;
+  inviteCode?: string;
   createdAt: string;
   updatedAt: string;
 }

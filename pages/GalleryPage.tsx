@@ -83,7 +83,7 @@ const GalleryPage: React.FC = () => {
         <select
           value={activeTripId}
           onChange={(e) => setSelectedTripId(e.target.value)}
-          className="w-full bg-white border border-slate-200 py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 font-semibold text-sm text-slate-700"
+          className="w-full bg-white border border-slate-200 py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500/10 focus:border-teal-500 font-semibold text-sm text-slate-700"
         >
           {trips.map(t => (
             <option key={t.id} value={t.id}>{t.title} — {t.destination}</option>
@@ -96,7 +96,7 @@ const GalleryPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('all')}
           className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            activeTab === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
+            activeTab === 'all' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500'
           }`}
         >
           All Photos
@@ -104,7 +104,7 @@ const GalleryPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('verified')}
           className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all ${
-            activeTab === 'verified' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500'
+            activeTab === 'verified' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-500'
           }`}
         >
           <ShieldCheck size={16} />
@@ -195,7 +195,7 @@ const GalleryPage: React.FC = () => {
       {role !== 'none' && (
         <button
           onClick={() => setShowUploadModal(true)}
-          className="fixed bottom-24 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-200 flex items-center justify-center active:scale-95 transition-transform z-40"
+          className="fixed bottom-24 right-6 w-14 h-14 bg-teal-600 text-white rounded-full shadow-lg shadow-teal-200 flex items-center justify-center active:scale-95 transition-transform z-40"
           aria-label="Upload media"
         >
           <Camera size={28} />
@@ -210,6 +210,9 @@ const GalleryPage: React.FC = () => {
           onClose={() => setShowUploadModal(false)}
           participantIds={selectedTrip.participantIds}
           tripTitle={selectedTrip.title}
+          tripDestination={selectedTrip.destination}
+          tripOwnerId={selectedTrip.ownerId}
+          tripIsPublic={selectedTrip.isPublic}
         />
       )}
 

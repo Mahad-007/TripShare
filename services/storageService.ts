@@ -19,9 +19,10 @@ export async function uploadCoverImage(
   const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const path = `covers/${userId}/${Date.now()}_${sanitized}`;
   const storageRef = ref(storage, path);
+  const metadata = { contentType: file.type };
 
   return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, file);
+    const task = uploadBytesResumable(storageRef, file, metadata);
 
     task.on(
       'state_changed',
@@ -69,9 +70,10 @@ export async function uploadAvatar(
 
   const path = `avatars/${userId}/${Date.now()}_avatar`;
   const storageRef = ref(storage, path);
+  const metadata = { contentType: file.type };
 
   return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, file);
+    const task = uploadBytesResumable(storageRef, file, metadata);
     task.on(
       'state_changed',
       (snapshot) => {

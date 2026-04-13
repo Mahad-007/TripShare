@@ -16,12 +16,16 @@ import { Capacitor } from '@capacitor/core';
 
 const googleProvider = new GoogleAuthProvider();
 
+let googleAuthInitialized = false;
+
 export async function registerWithEmail(name: string, email: string, password: string) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const normalizedEmail = email.toLowerCase();
+  const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
   await updateProfile(credential.user, { displayName: name });
   await setDoc(doc(db, 'users', credential.user.uid), {
     name,
-    email,
+    email: normalizedEmail,
+    avatar: '',
     createdAt: new Date().toISOString(),
   });
   return credential.user;
@@ -41,6 +45,7 @@ export async function loginWithGoogle() {
       scopes: ['profile', 'email'],
       grantOfflineAccess: true,
     });
+    googleAuthInitialized = true;
     const googleUser = await GoogleAuth.signIn();
     const idToken = googleUser.authentication.idToken;
     const firebaseCredential = GoogleAuthProvider.credential(idToken);
@@ -49,7 +54,7 @@ export async function loginWithGoogle() {
       doc(db, 'users', result.user.uid),
       {
         name: result.user.displayName || '',
-        email: result.user.email || '',
+        email: (result.user.email || '').toLowerCase(),
         avatar: result.user.photoURL || '',
         createdAt: new Date().toISOString(),
       },
@@ -63,7 +68,7 @@ export async function loginWithGoogle() {
       doc(db, 'users', credential.user.uid),
       {
         name: credential.user.displayName || '',
-        email: credential.user.email || '',
+        email: (credential.user.email || '').toLowerCase(),
         avatar: credential.user.photoURL || '',
         createdAt: new Date().toISOString(),
       },
@@ -78,12 +83,14 @@ export async function resetPassword(email: string) {
 }
 
 export async function logout() {
-  if (Capacitor.isNativePlatform()) {
+  if (Capacitor.isNativePlatform() && googleAuthInitialized) {
     try {
       const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
       await GoogleAuth.signOut();
     } catch (_) {
-      // Not signed in with Google, ignore
+      // GoogleAuth.signOut() failed — continue with Firebase sign-out
+    } finally {
+      googleAuthInitialized = false;
     }
   }
   await signOut(auth);

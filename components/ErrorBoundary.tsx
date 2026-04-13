@@ -56,7 +56,7 @@ class ErrorBoundary extends Component<Props, State> {
               </button>
               <button
                 onClick={this.handleReset}
-                className="flex-1 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 py-3 rounded-2xl bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors flex items-center justify-center space-x-2"
               >
                 <RotateCcw size={16} />
                 <span>Try Again</span>

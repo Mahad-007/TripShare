@@ -96,9 +96,9 @@ const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }
 
     return (
-      <div className="flex items-center space-x-1 bg-indigo-500/20 px-2.5 py-1 rounded-full">
-        <ShieldCheck size={12} className="text-indigo-400" />
-        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-tight">Hash Stored</span>
+      <div className="flex items-center space-x-1 bg-teal-500/20 px-2.5 py-1 rounded-full">
+        <ShieldCheck size={12} className="text-teal-400" />
+        <span className="text-[10px] font-bold text-teal-300 uppercase tracking-tight">Hash Stored</span>
       </div>
     );
   };
@@ -201,7 +201,7 @@ const MediaLightbox: React.FC<MediaLightboxProps> = ({
             <button
               onClick={handleGenerateHash}
               disabled={generatingHash}
-              className="w-full flex items-center justify-center space-x-2 py-2.5 bg-indigo-600/30 hover:bg-indigo-600/50 rounded-xl text-white text-xs font-bold transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center space-x-2 py-2.5 bg-teal-600/30 hover:bg-teal-600/50 rounded-xl text-white text-xs font-bold transition-colors disabled:opacity-50"
             >
               {generatingHash ? (
                 <Loader size={14} className="animate-spin" />

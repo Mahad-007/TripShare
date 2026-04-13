@@ -33,7 +33,7 @@ export async function generateTripReportPDF(
 
   // Page 1: Trip overview
   doc.setFontSize(22);
-  doc.setTextColor(67, 56, 202); // indigo-700
+  doc.setTextColor(15, 118, 110); // teal-700
   doc.text(trip.title, pageWidth / 2, 30, { align: 'center' });
 
   doc.setFontSize(12);
@@ -90,7 +90,7 @@ export async function generateTripReportPDF(
       head: [['Date', 'Description', 'Amount', 'Paid By', 'Split']],
       body: tableData,
       styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255 },
+      headStyles: { fillColor: [13, 148, 136], textColor: 255 },
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
@@ -117,7 +117,7 @@ export async function generateTripReportPDF(
       head: [['Participant', 'Balance', 'Status']],
       body: balanceData,
       styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255 },
+      headStyles: { fillColor: [13, 148, 136], textColor: 255 },
     });
   }
 
@@ -142,7 +142,21 @@ export async function generateTripReportPDF(
   }
 
   const filename = `trip-${trip.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-  doc.save(filename);
+  const pdfBlob = doc.output('blob');
+
+  // Try Web Share API first (works on mobile / Capacitor)
+  if (navigator.share && navigator.canShare?.({ files: [new File([pdfBlob], filename, { type: 'application/pdf' })] })) {
+    const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+    await navigator.share({ files: [file], title: trip.title });
+  } else {
+    // Fallback: trigger browser download via object URL
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function exportExpensesCSV(
@@ -187,11 +201,18 @@ export function exportExpensesCSV(
   });
 
   const csv = rows.map((r) => r.join(',')).join('\n');
+  const csvFilename = `expenses-${trip.title.replace(/\s+/g, '-').toLowerCase()}.csv`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `expenses-${trip.title.replace(/\s+/g, '-').toLowerCase()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+
+  if (navigator.share && navigator.canShare?.({ files: [new File([blob], csvFilename, { type: 'text/csv' })] })) {
+    const file = new File([blob], csvFilename, { type: 'text/csv' });
+    navigator.share({ files: [file], title: 'Trip Expenses' }).catch(() => {});
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = csvFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
