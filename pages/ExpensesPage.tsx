@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Expense } from '../types';
 import { Plus, PieChart as ChartIcon, Sparkles, User as UserIcon, Trash2, Pencil, Receipt, Download } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -19,7 +20,20 @@ const ExpensesPage: React.FC = () => {
   const { trips } = useTrips();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [selectedTripId, setSelectedTripId] = useState<string>('');
+  const [searchParams] = useSearchParams();
+  // Initialize from ?tripId=... so notification deep-links land on the right trip.
+  // Falls through to the first trip if the param is missing or unknown.
+  const [selectedTripId, setSelectedTripId] = useState<string>(
+    () => searchParams.get('tripId') || ''
+  );
+
+  // If trips load AFTER mount and a query-param trip appears among them, pin it.
+  useEffect(() => {
+    const queryTripId = searchParams.get('tripId');
+    if (queryTripId && queryTripId !== selectedTripId && trips.some(t => t.id === queryTripId)) {
+      setSelectedTripId(queryTripId);
+    }
+  }, [searchParams, trips, selectedTripId]);
 
   const activeTripId = selectedTripId || trips[0]?.id || '';
   const selectedTrip = trips.find(t => t.id === activeTripId);
@@ -157,9 +171,14 @@ const ExpensesPage: React.FC = () => {
     setIsSummarizing(false);
   };
 
-  const handleExportCSV = () => {
-    if (selectedTrip) {
-      exportExpensesCSV(selectedTrip, filteredExpenses, selectedTrip.participants);
+  const handleExportCSV = async () => {
+    if (!selectedTrip) return;
+    try {
+      await exportExpensesCSV(selectedTrip, filteredExpenses, selectedTrip.participants);
+      showToast('CSV exported', 'success');
+    } catch (err) {
+      console.error('[export csv]', err);
+      showToast('Failed to export CSV', 'error');
     }
   };
 

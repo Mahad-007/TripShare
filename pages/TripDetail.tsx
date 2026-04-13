@@ -204,7 +204,8 @@ const TripDetail: React.FC = () => {
       try {
         await generateTripReportPDF(trip, expenses, trip.participants);
         showToast('PDF report downloaded', 'success');
-      } catch {
+      } catch (err) {
+        console.error('[export report]', err);
         showToast('Failed to generate report', 'error');
       }
     }

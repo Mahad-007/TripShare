@@ -1,4 +1,5 @@
 import { Trip, Expense, User } from '../types';
+import { saveFile } from '../utils/saveFile';
 
 function calculateBalances(
   expenses: Expense[],
@@ -143,27 +144,14 @@ export async function generateTripReportPDF(
 
   const filename = `trip-${trip.title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
   const pdfBlob = doc.output('blob');
-
-  // Try Web Share API first (works on mobile / Capacitor)
-  if (navigator.share && navigator.canShare?.({ files: [new File([pdfBlob], filename, { type: 'application/pdf' })] })) {
-    const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-    await navigator.share({ files: [file], title: trip.title });
-  } else {
-    // Fallback: trigger browser download via object URL
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  await saveFile(pdfBlob, filename, 'application/pdf', trip.title);
 }
 
-export function exportExpensesCSV(
+export async function exportExpensesCSV(
   trip: Trip,
   expenses: Expense[],
   participants: User[]
-): void {
+): Promise<void> {
   const rows: string[][] = [];
 
   // Header
@@ -203,16 +191,5 @@ export function exportExpensesCSV(
   const csv = rows.map((r) => r.join(',')).join('\n');
   const csvFilename = `expenses-${trip.title.replace(/\s+/g, '-').toLowerCase()}.csv`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-
-  if (navigator.share && navigator.canShare?.({ files: [new File([blob], csvFilename, { type: 'text/csv' })] })) {
-    const file = new File([blob], csvFilename, { type: 'text/csv' });
-    navigator.share({ files: [file], title: 'Trip Expenses' }).catch(() => {});
-  } else {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = csvFilename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  await saveFile(blob, csvFilename, 'text/csv', 'Trip Expenses');
 }
