@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Heart, Share2, ShieldCheck, MapPin, Image as ImageIcon, Loader, UserPlus, UserMinus } from 'lucide-react';
-import { fetchPublicMedia, ExplorePost } from '../services/mediaService';
+import { fetchPublicMedia, backfillPublicMediaMirrors, ExplorePost } from '../services/mediaService';
 import { toggleLike, fetchLikeStates, followUser, unfollowUser, fetchFollowStates } from '../services/socialService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,12 +22,29 @@ const ExplorePage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchPublicMedia(15)
-      .then((data) => { if (!cancelled) setPosts(data); })
-      .catch(() => { if (!cancelled) setError('Could not load explore feed.'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    // One-time backfill of /publicMedia mirrors for this user's existing public
+    // media. Idempotent, gated by localStorage — no-op after first successful run.
+    const run = async () => {
+      if (user?.id) {
+        await backfillPublicMediaMirrors(user.id);
+      }
+      if (cancelled) return;
+      try {
+        const data = await fetchPublicMedia(15);
+        if (!cancelled) setPosts(data);
+      } catch (err) {
+        console.error('[ExplorePage] fetchPublicMedia failed:', err);
+        if (!cancelled) {
+          const detail = err instanceof Error ? err.message : String(err);
+          setError(`Could not load explore feed. (${detail})`);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id]);
 
   // Fetch like & follow states after posts load
   useEffect(() => {

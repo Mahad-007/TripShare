@@ -160,6 +160,22 @@ export async function deleteTrip(tripId: string): Promise<void> {
     await batch.commit();
   }
 
+  // Cascade delete: remove any /publicMedia mirrors for public media in this
+  // trip so orphaned mirrors don't linger in the Explore feed.
+  const publicMediaIds = mediaDocs
+    .filter((d) => (d.data() as { isPublic?: boolean }).isPublic === true)
+    .map((d) => d.id);
+  for (let i = 0; i < publicMediaIds.length; i += 499) {
+    const batch = writeBatch(db);
+    const chunk = publicMediaIds.slice(i, i + 499);
+    chunk.forEach((id) => batch.delete(doc(db, 'publicMedia', id)));
+    try {
+      await batch.commit();
+    } catch (err) {
+      console.warn('[deleteTrip] publicMedia mirror cleanup failed', err);
+    }
+  }
+
   // Clean up media Storage files
   for (const mediaDoc of mediaDocs) {
     const mData = mediaDoc.data();
@@ -208,15 +224,24 @@ export function subscribeToUserTrips(
     orderBy('createdAt', 'desc')
   );
 
-  return onSnapshot(q, async (snapshot) => {
-    const trips: Trip[] = [];
-    for (const docSnap of snapshot.docs) {
-      const data = docSnap.data() as FirestoreTrip;
-      const participants = await hydrateParticipants(data.participantIds || []);
-      trips.push(docToTrip(docSnap.id, data, participants));
+  return onSnapshot(
+    q,
+    async (snapshot) => {
+      const trips: Trip[] = [];
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data() as FirestoreTrip;
+        const participants = await hydrateParticipants(data.participantIds || []);
+        trips.push(docToTrip(docSnap.id, data, participants));
+      }
+      callback(trips);
+    },
+    (error) => {
+      // Surface query failures (missing composite index, permission denied, etc.)
+      // instead of letting them fail silently. Without this, a broken subscription
+      // leaves the Dashboard stuck on whatever state was cached last.
+      console.error('[subscribeToUserTrips] onSnapshot error:', error);
     }
-    callback(trips);
-  });
+  );
 }
 
 export async function removeParticipant(tripId: string, userId: string): Promise<void> {

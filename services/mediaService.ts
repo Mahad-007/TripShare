@@ -1,8 +1,8 @@
 import {
   collection,
-  collectionGroup,
   doc,
   addDoc,
+  setDoc,
   deleteDoc,
   getDoc,
   getDocs,
@@ -13,6 +13,7 @@ import {
   limit as firestoreLimit,
   Unsubscribe,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
@@ -265,6 +266,20 @@ export async function uploadMedia(
     firestoreData
   );
 
+  // Mirror public media into the flat /publicMedia collection so the Explore
+  // feed can read it with a trivial rule (no collectionGroup + get() combo).
+  // Best-effort: failure here must not fail the upload.
+  if (data.isPublic) {
+    try {
+      await setDoc(doc(db, 'publicMedia', docRef.id), {
+        ...firestoreData,
+        tripId,
+      });
+    } catch (err) {
+      console.warn('[uploadMedia] publicMedia mirror write failed', err);
+    }
+  }
+
   logVerification(docRef.id, tripId, blockchainHash, uploadedBy, 'initial').catch(() => {});
 
   if (tripContext?.participantIds) {
@@ -293,6 +308,13 @@ export async function deleteMedia(
     await deleteStorageFile(thumbnailUrl);
   }
   await deleteDoc(doc(db, 'trips', tripId, 'media', mediaId));
+  // Best-effort: purge the Explore mirror if one exists. Silently ignore
+  // "not found" and permission errors (non-public media never had a mirror).
+  try {
+    await deleteDoc(doc(db, 'publicMedia', mediaId));
+  } catch {
+    /* no mirror or no permission — safe to ignore */
+  }
 }
 
 // --- Real-time Subscription ---
@@ -327,12 +349,18 @@ export function subscribeToMedia(
     orderBy('createdAt', 'desc')
   );
 
-  return onSnapshot(q, (snapshot) => {
-    const media: Media[] = snapshot.docs.map((docSnap) =>
-      firestoreToMedia(docSnap.id, tripId, docSnap.data())
-    );
-    callback(media);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const media: Media[] = snapshot.docs.map((docSnap) =>
+        firestoreToMedia(docSnap.id, tripId, docSnap.data())
+      );
+      callback(media);
+    },
+    (error) => {
+      console.error('[subscribeToMedia] onSnapshot error:', { tripId, error });
+    }
+  );
 }
 
 // --- Public Media Feed (for ExplorePage) ---
@@ -357,9 +385,11 @@ export interface ExplorePost {
  * non-member has no read permission on a private trip even if it hosts a public
  * photo.
  *
- * Owner display metadata (name/avatar/startDate) is fetched separately from
- * the users collection (any authed user can read). `startDate` is not needed
- * for non-member rendering; we leave it blank when the trip can't be read.
+ * Owner display metadata (name/avatar) is fetched from the users collection
+ * (any authed user can read). startDate is left blank — it was a source of
+ * swallowed permission-denied errors on private trips. If the "Upcoming"
+ * filter ever needs to work for Explore posts, denormalize tripStartDate onto
+ * Media at upload time the same way tripTitle/tripDestination already are.
  */
 export async function fetchPublicMedia(limitCount: number = 15): Promise<ExplorePost[]> {
   const timeout = new Promise<never>((_, reject) =>
@@ -367,13 +397,24 @@ export async function fetchPublicMedia(limitCount: number = 15): Promise<Explore
   );
 
   const fetchData = async (): Promise<ExplorePost[]> => {
+    // Query the flat /publicMedia mirror collection. See firestore.rules for
+    // why this beats a collectionGroup('media') query on the original path.
     const mediaQuery = query(
-      collectionGroup(db, 'media'),
-      where('isPublic', '==', true),
+      collection(db, 'publicMedia'),
       orderBy('createdAt', 'desc'),
       firestoreLimit(limitCount)
     );
-    const mediaSnap = await getDocs(mediaQuery);
+
+    let mediaSnap;
+    try {
+      mediaSnap = await getDocs(mediaQuery);
+    } catch (err) {
+      const code = (err as { code?: string })?.code || 'unknown';
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[fetchPublicMedia] query failed', { code, message, err });
+      throw new Error(`fetchPublicMedia: ${code} — ${message}`);
+    }
+
     if (mediaSnap.empty) return [];
 
     // Hydrate owner (name, avatar) — cached per owner to dedupe reads.
@@ -390,52 +431,34 @@ export async function fetchPublicMedia(limitCount: number = 15): Promise<Explore
           ownerCache.set(ownerId, info);
           return info;
         }
-      } catch { /* ignore */ }
+      } catch { /* ignore — best-effort hydration */ }
       const info = { name: 'Unknown' };
       ownerCache.set(ownerId, info);
       return info;
     };
 
-    // Optional trip-startDate cache (only used if we can read the trip,
-    // which is true for public trips). Non-blocking and best-effort.
-    const tripStartCache = new Map<string, string>();
-    const resolveStartDate = async (tripId: string): Promise<string> => {
-      const cached = tripStartCache.get(tripId);
-      if (cached !== undefined) return cached;
-      try {
-        const tripSnap = await getDoc(doc(db, 'trips', tripId));
-        if (tripSnap.exists()) {
-          const d = (tripSnap.data().startDate as string) || '';
-          tripStartCache.set(tripId, d);
-          return d;
-        }
-      } catch { /* no read permission for private parent trip — expected */ }
-      tripStartCache.set(tripId, '');
-      return '';
-    };
-
     const posts: ExplorePost[] = [];
-    for (const mediaDoc of mediaSnap.docs) {
-      const data = mediaDoc.data();
-      // CollectionGroup path: `trips/{tripId}/media/{mediaId}`
-      const tripId = mediaDoc.ref.parent.parent?.id;
+    for (const mirrorDoc of mediaSnap.docs) {
+      const data = mirrorDoc.data();
+      // Mirror docs carry tripId denormalized (written by uploadMedia); mirrorDoc.id
+      // is the same id as the source media doc under /trips/{tripId}/media/.
+      const tripId = (data.tripId as string) || '';
       if (!tripId) continue;
 
       const ownerId = (data.tripOwnerId as string) || (data.uploadedBy as string) || '';
       const owner = await resolveOwner(ownerId);
-      const startDate = await resolveStartDate(tripId);
 
       posts.push({
-        id: `${tripId}_${mediaDoc.id}`,
+        id: `${tripId}_${mirrorDoc.id}`,
         tripId,
-        mediaId: mediaDoc.id,
+        mediaId: mirrorDoc.id,
         tripTitle: (data.tripTitle as string) || '',
         destination: (data.tripDestination as string) || '',
-        startDate,
+        startDate: '',
         ownerId,
         ownerName: owner.name,
         ownerAvatar: owner.avatar,
-        media: firestoreToMedia(mediaDoc.id, tripId, data),
+        media: firestoreToMedia(mirrorDoc.id, tripId, data),
       });
     }
 
@@ -447,3 +470,77 @@ export async function fetchPublicMedia(limitCount: number = 15): Promise<Explore
 
 /** @deprecated use fetchPublicMedia — kept as a thin alias for any lingering callers */
 export const fetchPublicTripMedia = fetchPublicMedia;
+
+/**
+ * Idempotent one-time backfill: walks every trip the caller participates in,
+ * finds media flagged isPublic, and writes a mirror doc at /publicMedia/{id}
+ * if one is missing. Gated by a localStorage flag so it only runs once per
+ * device per user.
+ *
+ * Each client covers the trips it has read access to; collectively, users
+ * will mirror their own public media as they open the app. Existing mirrors
+ * are harmlessly overwritten with the same data (idempotent).
+ */
+export async function backfillPublicMediaMirrors(userId: string): Promise<void> {
+  if (!userId) return;
+  const storageKey = `publicMediaBackfill:v1:${userId}`;
+  if (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey)) {
+    return;
+  }
+
+  try {
+    const tripsSnap = await getDocs(
+      query(collection(db, 'trips'), where('participantIds', 'array-contains', userId))
+    );
+
+    if (tripsSnap.empty) {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, '1');
+      return;
+    }
+
+    let batch = writeBatch(db);
+    let pending = 0;
+
+    for (const tripDoc of tripsSnap.docs) {
+      const tripId = tripDoc.id;
+      const tripData = tripDoc.data();
+
+      const publicMediaSnap = await getDocs(
+        query(
+          collection(db, 'trips', tripId, 'media'),
+          where('isPublic', '==', true)
+        )
+      );
+
+      for (const mediaDoc of publicMediaSnap.docs) {
+        const data = mediaDoc.data();
+        batch.set(doc(db, 'publicMedia', mediaDoc.id), {
+          ...data,
+          tripId,
+          // Backfill any missing denormalized trip fields from the parent trip doc
+          tripOwnerId: (data.tripOwnerId as string) || (tripData.ownerId as string) || '',
+          tripTitle: (data.tripTitle as string) || (tripData.title as string) || '',
+          tripDestination: (data.tripDestination as string) || (tripData.destination as string) || '',
+        });
+        pending++;
+
+        // Firestore batch limit is 500 ops — commit and start a new batch at 400
+        if (pending >= 400) {
+          await batch.commit();
+          batch = writeBatch(db);
+          pending = 0;
+        }
+      }
+    }
+
+    if (pending > 0) {
+      await batch.commit();
+    }
+
+    if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, '1');
+  } catch (err) {
+    // Don't mark the flag on failure — the next mount will retry. This is
+    // best-effort and must not interfere with normal Explore loading.
+    console.warn('[backfillPublicMediaMirrors] failed', err);
+  }
+}
